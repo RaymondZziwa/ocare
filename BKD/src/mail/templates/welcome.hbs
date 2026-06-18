@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Welcome - Prof Bioresearch</title>
+</head>
+
+<body
+    style="margin:0; padding:0; background-color:#f4f6f9; color:#333; font-family: 'Segoe UI', Arial, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+    <div
+        style="max-width:600px; margin:40px auto; background-color:#ffffff; padding:30px; border-radius:10px; box-shadow:0 4px 15px rgba(0,0,0,0.1);">
+
+        <!-- Header -->
+        <div style="text-align:center; padding-bottom:20px; border-bottom:2px solid #e6e9ef;">
+            <h1 style="margin:0; font-size:26px; font-weight:700; color:#0056b3;">
+                Welcome to Prof Bioresearch
+            </h1>
+        </div>
+
+        <!-- Body -->
+        <div style="font-size:16px; line-height:1.6; color:#333; padding-top:20px;">
+            <p>Hi <strong>{{firstName}} {{lastName}}</strong>,</p>
+            <p>We are excited to officially welcome you to <strong>Prof Bioresearch</strong>. You are now part of a team
+                that values innovation, collaboration, and excellence in everything we do.</p>
+
+            <p>As part of your onboarding, here is your <strong>One-Time Password (OTP)</strong> to access your employee
+                account:</p>
+
+            <div style="margin:20px 0; text-align:center;">
+                <span
+                    style="display:inline-block; font-size:22px; font-weight:bold; background:#0056b3; color:#ffffff; padding:12px 24px; border-radius:6px; letter-spacing:2px;">
+                    {{otp}}
+                </span>
+            </div>
+
+            <p>Please use this OTP during your first login. For security reasons, it will expire after <strong>24
+                    hours</strong>.</p>
+
+            <p>If you have any questions or need assistance, feel free to reach out to the HR team at <a
+                    href="mailto:hr@profbioresearch.com"
+                    style="color:#0056b3; text-decoration:none;">hr@profbioresearch.com</a>.</p>
+
+            <p>We look forward to achieving great things together.</p>
+
+            <p>Best regards,<br /><strong>The Prof Bioresearch Team</strong></p>
+        </div>
+
+        <!-- Footer -->
+        <div
+            style="margin-top:40px; font-size:12px; color:#777; text-align:center; border-top:1px solid #e6e9ef; padding-top:20px;">
+            &copy; {{year}} Prof Bioresearch · All rights reserved<br />
+            <a href="https://www.profbioresearch.com"
+                style="color:#0056b3; text-decoration:none;">www.profbioresearch.com</a>
+        </div>
+    </div>
+</body>
+
+</html>

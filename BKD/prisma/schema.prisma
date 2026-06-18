@@ -1,0 +1,891 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ENUMS - Keep as is, they're efficient
+enum InventoryRecordCategory {
+  RESTOCK
+  DEPLETION
+  TRANSFER
+  ADJUSTMENT
+  MANUFACTURING
+}
+
+enum DeliveryAgentStatus {
+  OCCUPIED
+  AVAILABLE
+  UNAVAILABLE
+}
+
+enum TicketStatus {
+  ACTIVE
+  USED
+  CANCELLED
+  EXPIRED
+}
+
+enum ChannelType {
+  BANK_TRANSFER
+  MOBILE_MONEY
+}
+
+enum WithdrawStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum StockTransferStatus {
+  CONFIRMED
+  PENDING
+  REJECTED
+}
+
+enum PaymentType {
+  CASH
+  CHEQUE
+  MOBILE_MONEY
+  BARTER_PAYMENT
+}
+
+enum UtilityType {
+  LIGHT
+  NWSC
+}
+
+enum ExpenseCategory {
+  RENT
+  UTILITIES
+  SALARIES
+  SUPPLIES
+  MAINTENANCE
+  TRANSPORT
+  INSURANCE
+  MARKETING
+  TRAINING
+  TAXES
+  MEDICAL_SUPPLIES
+  OFFICE_SUPPLIES
+  EQUIPMENT_PURCHASE
+  EQUIPMENT_REPAIR
+  CLEANING
+  SECURITY
+  INTERNET
+  WATER
+  ELECTRICITY
+  COMMUNICATION
+  SOFTWARE_SUBSCRIPTIONS
+  MISCELLANEOUS
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum ChequeStatus {
+  PENDING
+  PAID
+  BOUNCED
+}
+
+enum Status {
+  APPROVED
+  PENDING
+  REJECTED
+}
+
+enum EventStatus {
+  OPEN
+  CLOSED
+}
+
+enum EventPaymentStatus {
+  PAID
+  PARTIALLY_PAID
+  UNPAID
+}
+
+enum PaymentStatus {
+  FULLY_PAID
+  PARTIALLY_PAID
+  UNPAID
+}
+
+enum SaleStatus {
+  PENDING
+  FAILED
+  IN_DELIVERY
+  CANCELLED
+  SUCCESSFUL
+}
+
+enum PaymentMethodType {
+  CASH
+  MTN_MOMO
+  AIRTEL_MOMO
+  CARD
+  PROF_MOMO
+}
+
+enum SeedlingGrowthStatus {
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+enum ManufacturingStatus {
+  PENDING
+  NORMAL
+  WASTAGE_DETECTED
+  GOOD_UTILIZATION
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL //withdraw
+  TRANSFER
+  SALE_PAYMENT //for payments received from sales, projects, events, etc.
+  REFUND //for sale refunds and supply payment refunds
+}
+
+enum SaleType {
+  IN_SHOP
+  APP
+}
+
+enum SUPPLIER_TYPE {
+  INDIVIDUAL
+  BUSINESSS
+}
+
+// System config - Optimized indexes
+model Company {
+  id          String   @id @default(uuid())
+  name        String
+  email       String
+  tel1        String
+  tel2        String?
+  address     String
+  logo        String?
+  website     String?
+  tinNumber   String?
+  description String?
+  foundedYear Int?
+  industry    String?
+  employees   String?
+  workHours   Float?   @default(8.0)
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@index([email])
+  @@index([name])
+}
+
+model PaymentMethod {
+  id        String   @id @default(uuid())
+  name      String
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@unique([name])
+}
+
+// Store with optimized relationships
+model Store {
+  id                  String     @id @default(uuid())
+  name                String
+  branchId            String
+  deptId              String
+  isForSales          Boolean    @default(false)
+  branch              Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  dept                Department @relation(fields: [deptId], references: [id], onDelete: Cascade)
+  authorizedPersonnel Json? // Consider normalizing if frequently queried
+
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  // Relations
+  ProductInventory     ProductInventory[]
+  Sales                Sale[]
+  fromInventoryRecords InventoryRecord[]  @relation("FromStore")
+  toInventoryRecords   InventoryRecord[]  @relation("ToStore")
+  Supply               Supply[]
+
+  @@index([branchId, deptId])
+  @@index([name])
+  @@map("stores") // Explicit table name
+}
+
+model Unit {
+  id        String   @id @default(uuid())
+  name      String
+  value     Float?
+  abr       String?
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  ProductInventory ProductInventory[]
+  InventoryRecord  InventoryRecord[]
+  Supply           Supply[]
+  Item             Item[]
+
+  @@unique([name])
+  @@map("units")
+}
+
+// Branch with composite indexes
+model Branch {
+  id        String   @id @default(uuid())
+  name      String
+  location  String
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  Employee      Employee[]
+  Department    Department[]
+  Store         Store[]
+  branchExpense branchExpense[]
+
+  @@index([name, location])
+  @@map("branches")
+}
+
+model Department {
+  id        String     @id @default(uuid())
+  name      String
+  branchId  String
+  branch    Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  updatedAt DateTime   @updatedAt
+  createdAt DateTime   @default(now())
+  Employee  Employee[]
+  Store     Store[]
+
+  @@index([branchId])
+  @@index([name])
+  @@map("departments")
+}
+
+// Permission system optimized
+model Permission {
+  id        String   @id @default(uuid())
+  module    String
+  name      String
+  value     String   @unique
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  Role Role[]
+
+  @@index([module, name])
+  @@map("permissions")
+}
+
+model Role {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  permissions Permission[]
+  updatedAt   DateTime     @updatedAt
+  createdAt   DateTime     @default(now())
+
+  Employee Employee[]
+
+  @@map("roles")
+}
+
+// Employee with optimized indexes for login
+model Employee {
+  id                    String      @id @default(uuid())
+  firstName             String
+  lastName              String
+  gender                Gender
+  email                 String      @unique
+  tel                   String      @unique
+  password              String
+  salary                Decimal     @db.Decimal(10, 2)
+  hasAccess             Boolean     @default(false)
+  hasPrescriptionAccess Boolean     @default(false)
+  isActive              Boolean     @default(true)
+  profileImage          String?
+  roleId                String
+  role                  Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  branchId              String?
+  deptId                String?
+  branch                Branch?     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  dept                  Department? @relation(fields: [deptId], references: [id], onDelete: Cascade)
+  updatedAt             DateTime    @updatedAt
+  createdAt             DateTime    @default(now())
+
+  // Relations
+  EmailVerification             EmailVerification[]
+  InventoryRecord               InventoryRecord[]
+  Sales                         Sale[]
+  EmployeeLoginLogs             EmployeeLoginLogs[]
+  branchExpense                 branchExpense[]
+  SalePayments                  SalePayments[]
+  Attendance                    Attendance[]
+  ClientPrescription            ClientPrescription[]
+  DeliveryNote                  DeliveryNote[]
+  Supply                        Supply[]
+  SupplyPayments                SupplyPayments[]
+  SalePaymentTransactionHistory SalePaymentTransactionHistory[]
+
+  @@index([email, isActive])
+  @@index([roleId])
+  @@index([branchId, deptId])
+  @@index([createdAt])
+  @@map("employees")
+}
+
+model EmployeeLoginLogs {
+  id         Int      @id @default(autoincrement())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now())
+
+  @@index([employeeId, createdAt])
+  @@map("employee_login_logs")
+}
+
+model EmailVerification {
+  id        String   @id @default(uuid())
+  userId    String
+  code      String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  employee Employee @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, code])
+  @@index([expiresAt])
+  @@map("email_verifications")
+}
+
+// Items with optimized indexing
+model ItemCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  code        String?
+  description String?
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  Item Item[]
+
+  @@map("item_categories")
+}
+
+model Item {
+  id              String        @id @default(uuid())
+  categoryId      String?
+  category        ItemCategory? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  brandId         String
+  brand           Brand         @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  barcodeType     String?
+  alertStockLevel Float?
+  description     String?
+  showInPos       Boolean       @default(false)
+  name            String
+  buyingPrice     Decimal       @db.Decimal(10, 2)
+  sellingPrice    Decimal       @db.Decimal(10, 2)
+  barcode         String?
+  unitId          String?
+  unit            Unit?         @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  image           String?
+  updatedAt       DateTime      @updatedAt
+  createdAt       DateTime      @default(now())
+
+  ProductInventory ProductInventory[]
+  InventoryRecord  InventoryRecord[]
+  Supply           Supply[]
+
+  @@index([categoryId])
+  @@index([name])
+  @@index([barcode])
+  @@index([createdAt])
+  @@map("items")
+}
+
+model Brand {
+  id        String   @id @default(uuid())
+  name      String
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  Item      Item[]
+}
+
+model Service {
+  id        Int      @id @default(autoincrement())
+  name      String
+  price     Decimal  @db.Decimal(10, 2)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@index([name])
+  @@map("services")
+}
+
+// ProductInventory with composite indexes for store queries
+model ProductInventory {
+  id        String   @id @default(uuid())
+  itemId    String
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  storeId   String
+  qty       Float
+  unitId    String
+  unit      Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@unique([itemId, storeId, unitId])
+  @@index([storeId, itemId])
+  @@index([qty])
+  @@map("product_inventory")
+}
+
+// Inventory records with optimized date queries
+model InventoryRecord {
+  id       String                  @id @default(uuid())
+  category InventoryRecordCategory
+  itemId   String
+  item     Item                    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  storeId String
+  store   Store  @relation("FromStore", fields: [storeId], references: [id], onDelete: Cascade)
+
+  toStoreId String?
+  toStore   Store?  @relation("ToStore", fields: [toStoreId], references: [id], onDelete: Cascade)
+
+  deliveryNoteId String?
+  deliveryNote   DeliveryNote? @relation("dn", fields: [deliveryNoteId], references: [id], onDelete: Cascade)
+
+  initiatedQty      Float?
+  qty               Float
+  remainingQuantity Float?
+  unitId            String
+  unit              Unit                @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  source            String
+  description       String?
+  recordedBy        String
+  employee          Employee            @relation(fields: [recordedBy], references: [id], onDelete: Cascade)
+  transferId        String?
+  transferStatus    StockTransferStatus @default(CONFIRMED)
+  isResolved        Boolean?
+  resolveNotes      String?
+  images            Json?
+  extraNote         String?
+  expectedOutput    Float?
+  recordedOutput    Float?
+  updatedAt         DateTime            @updatedAt
+  createdAt         DateTime            @default(now())
+
+  @@index([storeId, createdAt])
+  @@index([itemId, createdAt])
+  @@index([category, createdAt])
+  @@index([recordedBy, createdAt])
+  @@map("inventory_records")
+}
+
+// SALES - HEAVILY OPTIMIZED FOR POS
+model Sale {
+  id             String         @id @default(uuid())
+  type           SaleType       @default(IN_SHOP)
+  clientId       String?
+  client         Client?        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  items          Json // Array of CartItemDto - consider normalized table for large systems
+  servedBy       String?
+  employee       Employee?      @relation(fields: [servedBy], references: [id], onDelete: Cascade)
+  storeId        String
+  store          Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  saleStatus     SaleStatus     @default(SUCCESSFUL)
+  status         PaymentStatus
+  total          Decimal        @db.Decimal(10, 2)
+  balance        Decimal        @db.Decimal(10, 2)
+  paymentMethods Json // Array of PaymentMethodDto
+  notes          String?
+  updatedAt      DateTime       @updatedAt
+  createdAt      DateTime       @default(now())
+  SalePayments   SalePayments[]
+  timeLine       SaleTimeLine[]
+
+  // Comprehensive indexing for fast queries
+  @@index([storeId, createdAt])
+  @@index([servedBy, createdAt])
+  @@index([status, createdAt])
+  @@index([clientId, createdAt])
+  @@index([createdAt]) // For date range queries
+  @@index([total])
+  @@map("sales")
+}
+
+model SaleTimeLine {
+  id        String   @id @default(uuid())
+  saleId    String
+  sale      Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  state     String
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+model SalePayments {
+  id                            String                          @id @default(uuid())
+  saleId                        String
+  sale                          Sale                            @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  amount                        Decimal                         @db.Decimal(10, 2)
+  paymentMethod                 PaymentMethodType
+  referenceId                   String?
+  notes                         String?
+  cashierId                     String
+  employee                      Employee                        @relation(fields: [cashierId], references: [id], onDelete: Cascade)
+  updatedAt                     DateTime                        @updatedAt
+  createdAt                     DateTime                        @default(now())
+  SalePaymentTransactionHistory SalePaymentTransactionHistory[]
+
+  @@index([createdAt])
+  @@map("salesPayments")
+}
+
+model SalePaymentTransactionHistory {
+  id Int @id @default(autoincrement())
+
+  // Relationship to sale payment
+  salePaymentId String?
+  salePayment   SalePayments? @relation(fields: [salePaymentId], references: [id], onDelete: Cascade)
+
+  // Transaction identification
+  transaction_uuid        String  @unique
+  transaction_reference   String  @unique
+  provider_transaction_id String? @unique
+
+  // Amount information
+  amount           Decimal @db.Decimal(10, 2)
+  amount_formatted String?
+  currency         String  @default("UGX")
+
+  // Payment provider details
+  payment_method PaymentMethodType
+  provider       String? // "mtn", "airtel", "card payments"
+  provider_mode  String? // "mtnuganda", "airteluganda", "card paymentsuganda"
+  phone_number   String?
+
+  // Transaction status
+  status     WithdrawStatus @default(PENDING)
+  event_type String? // "collection.completed", "collection.failed"
+
+  // Description and notes
+  description String? @db.Text
+  notes       String? @db.Text
+
+  // Cashier/employee info
+  cashierId String
+  employee  Employee @relation(fields: [cashierId], references: [id], onDelete: Cascade)
+
+  // Webhook tracking
+  webhook_received_at DateTime @default(now())
+  webhook_payload     Json? // Store raw webhook payload for debugging
+
+  // Timestamps
+  transaction_initiated_at DateTime? // From webhook created_at
+  transaction_completed_at DateTime? // From webhook updated_at
+  created_at               DateTime  @default(now())
+  updated_at               DateTime  @updatedAt
+
+  // Indexes for better query performance
+  @@index([salePaymentId])
+  @@index([transaction_uuid])
+  @@index([transaction_reference])
+  @@index([provider_transaction_id])
+  @@index([provider])
+  @@index([phone_number])
+  @@index([created_at])
+  @@index([payment_method])
+  @@map("sale_payment_transaction_history")
+}
+
+// Clientele optimized
+model Client {
+  id           String   @id @default(uuid())
+  firstName    String
+  lastName     String
+  dob          DateTime?
+  gender       Gender?
+  phone        String?  @unique
+  email String? @unique
+  address      String?
+  profileImage String?
+  password     String?
+  pin          String?
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
+
+  Sales              Sale[]
+  ClientPrescription ClientPrescription[]
+
+  @@index([firstName, lastName])
+  @@index([phone])
+  @@index([createdAt])
+  @@map("clients")
+}
+
+model Withdraw {
+  id        Int            @id @default(autoincrement())
+  amount    Decimal        @db.Decimal(10, 2)
+  walletId  Int
+  wallet    Wallet         @relation(fields: [walletId], references: [id])
+  status    WithdrawStatus
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model WithdrawChannel {
+  id                      Int                       @id @default(autoincrement())
+  type                    ChannelType
+  name                    String
+  phoneNumber             String?
+  bank                    String?
+  accountNumber           String?
+  isVerified              Boolean                   @default(false)
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  ChannelVerificationCode ChannelVerificationCode[]
+  TransactionHistory      TransactionHistory[]
+  WithdrawHistory         WithdrawHistory[]
+}
+
+model ChannelVerificationCode {
+  id        Int             @id @default(autoincrement())
+  channelId Int
+  channel   WithdrawChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  code      String
+  expiresAt DateTime
+  createdAt DateTime        @default(now())
+
+  @@index([channelId, createdAt])
+}
+
+model TransactionHistory {
+  id              Int             @id @default(autoincrement())
+  type            TransactionType
+  amount          Decimal         @db.Decimal(10, 2)
+  channelId       Int
+  channel         WithdrawChannel @relation(fields: [channelId], references: [id])
+  status          WithdrawStatus
+  description     String?         @db.Text
+  reference       String          @unique
+  phoneNumber     String?
+  transactionId   String          @unique
+  provider        String?
+  currency        String
+  statusUpdatedAt DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model Wallet {
+  id              Int               @id @default(autoincrement())
+  name            String
+  purpose         String?
+  balance         Decimal           @default(0) @db.Decimal(10, 2)
+  createdAt       DateTime          @default(now())
+  isForSales      Boolean           @default(false)
+  canBeDeleted    Boolean           @default(false)
+  updatedAt       DateTime          @updatedAt
+  Withdraw        Withdraw[]
+  WithdrawHistory WithdrawHistory[]
+}
+
+model WithdrawHistory {
+  id                       Int             @id @default(autoincrement())
+  amount                   Decimal         @db.Decimal(10, 2)
+  walletId                 Int
+  wallet                   Wallet          @relation(fields: [walletId], references: [id])
+  channelId                Int
+  channel                  WithdrawChannel @relation(fields: [channelId], references: [id])
+  description              String?         @db.Text
+  reference                String          @unique
+  status                   WithdrawStatus
+  transaction_completed_at DateTime?
+  createdAt                DateTime        @default(now())
+  updatedAt                DateTime        @updatedAt
+}
+
+model branchExpense {
+  id           String          @id @default(uuid())
+  branchId     String
+  branch       Branch          @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  category     ExpenseCategory
+  title        String
+  description  String?
+  receiptImage String?
+  amount       Float
+  dateIncurred DateTime
+  recordedBy   String
+  employee     Employee        @relation(fields: [recordedBy], references: [id], onDelete: Cascade)
+  updatedAt    DateTime        @updatedAt
+  createdAt    DateTime        @default(now())
+
+  @@index([branchId, dateIncurred])
+  @@map("branch_expenses")
+}
+
+model Attendance {
+  id          Int       @id @default(autoincrement())
+  date        String
+  employeeId  String
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  timeIn      DateTime
+  timeOut     DateTime?
+  missedHours Float?
+  notes       String?
+  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime  @default(now())
+}
+
+model PayrollPeriods {
+  id          Int      @id @default(autoincrement())
+  periodStart DateTime
+  periodEnd   DateTime
+  payDate     DateTime // <-- add this
+  totalSpent  Decimal
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  payrolls Payroll[] // <-- relation renamed for clarity
+}
+
+model Payroll {
+  id               Int            @id @default(autoincrement())
+  payrollPeriodId  Int
+  payrollPeriod    PayrollPeriods @relation(fields: [payrollPeriodId], references: [id], onDelete: Cascade)
+  paymentStructure Json
+  updatedAt        DateTime       @updatedAt
+  createdAt        DateTime       @default(now())
+}
+
+model ClientPrescription {
+  id           String   @id @default(uuid())
+  clientId     String
+  client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  images       Json
+  notes        String?
+  prescribedBy String
+  employee     Employee @relation(fields: [prescribedBy], references: [id], onDelete: Cascade)
+  isReviewed   Boolean  @default(false)
+  reviewNotes  String?
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
+}
+
+model DeliveryNote {
+  id                 String   @id @default(uuid())
+  name               String
+  deliveryNoteNumber String
+  images             Json
+  registeredBy       String
+  employee           Employee @relation(fields: [registeredBy], references: [id], onDelete: Cascade)
+  notes              String?
+  updatedAt          DateTime @updatedAt
+  createdAt          DateTime @default(now())
+
+  InventoryRecord InventoryRecord[] @relation("dn")
+}
+
+model Supplier {
+  id        String        @id @default(uuid())
+  firstName String
+  lastName  String
+  email     String?       @unique
+  contact   String        @unique
+  address   String?
+  type      SUPPLIER_TYPE @default(INDIVIDUAL)
+  updatedAt DateTime      @updatedAt
+  createdAt DateTime      @default(now())
+  Supply    Supply[]
+
+  @@index([firstName, lastName])
+  @@index([contact])
+  @@index([createdAt])
+}
+
+model Supply {
+  id                 String             @id @default(uuid())
+  itemId             String
+  item               Item               @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  supplierId         String
+  supplier           Supplier           @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  qty                Float
+  unitId             String
+  uom                Unit               @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  value              Decimal            @db.Decimal(10, 2)
+  balance            Decimal            @db.Decimal(10, 2)
+  recievedBy         String
+  employee           Employee           @relation(fields: [recievedBy], references: [id], onDelete: Cascade)
+  paymentStatus      EventPaymentStatus @default(UNPAID)
+  proofImage         String?
+  destinationStoreId String
+  destinationStore   Store              @relation(fields: [destinationStoreId], references: [id], onDelete: Cascade)
+  updatedAt          DateTime           @updatedAt
+  createdAt          DateTime           @default(now())
+  SupplyPayments     SupplyPayments[]
+
+  @@index([supplierId])
+  @@index([createdAt])
+}
+
+model SupplyPayments {
+  id                String             @id @default(uuid())
+  supplyId          String
+  supply            Supply             @relation(fields: [supplyId], references: [id], onDelete: Cascade)
+  bank              String?
+  chequeNumber      String?
+  chequeBankingDate DateTime?
+  paymentType       PaymentType
+  barterItemName    String?
+  amount            Decimal            @db.Decimal(10, 2)
+  paidBy            String
+  employee          Employee           @relation(fields: [paidBy], references: [id], onDelete: Cascade)
+  paymentStatus     EventPaymentStatus
+  proofImage        String?
+  updatedAt         DateTime           @updatedAt
+  createdAt         DateTime           @default(now())
+}
+
+model BillingChannel {
+  id          Int         @id @default(autoincrement())
+  utility     UtilityType
+  name        String?
+  meterNumber String
+  isVerified  Boolean     @default(false)
+  area        String?
+  updatedAt   DateTime    @updatedAt
+  createdAt   DateTime    @default(now())
+
+  @@index([name])
+  @@map("billing_channels")
+}
+
+model DeliveryAgents {
+  id           String              @id @default(uuid())
+  firstName    String
+  lastName     String
+  licensePlate String?
+  status       DeliveryAgentStatus @default(UNAVAILABLE)
+  updatedAt    DateTime            @updatedAt
+  createdAt    DateTime            @default(now())
+}
+
+model DeliveryAreas {
+  id        String   @id @default(uuid())
+  name      String
+  cost      Decimal  @db.Decimal(10, 2)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}

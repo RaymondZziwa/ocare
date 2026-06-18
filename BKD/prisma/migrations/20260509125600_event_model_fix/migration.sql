@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE `events` ADD COLUMN `ticketsSold` INTEGER NOT NULL DEFAULT 0,
+    ADD COLUMN `totalRevenue` DECIMAL(10, 2) NOT NULL DEFAULT 0;
