@@ -13,7 +13,7 @@ async function bootstrap() {
       'http://localhost:5173',
       'http://localhost:5170',
       'http://localhost:8080',
-      'https://kingserp.netlify.app',
+      'https://ocareportal.netlify.app',
       'https://pbms.megaerpug.com',
       'http://localhost:8081',
       'https://pbdp.megaerpug.com',
