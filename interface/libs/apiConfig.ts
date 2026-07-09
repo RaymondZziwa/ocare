@@ -97,13 +97,10 @@ export const apiRequest = async <T>(
           processQueue(refreshError); // Process queued requests with error
 
           // Clear any stored user data and redirect to login
-          localStorage.removeItem("persist:userAuth");
-          sessionStorage.clear();
+          // Note: localStorage/sessionStorage don't exist in React Native
+          // Use AsyncStorage if needed for mobile app
 
           toast.error("Session expired. Please login again.");
-          setTimeout(() => {
-            //window.location.href = "/"; // Your login page
-          }, 2000);
           throw refreshError;
         } finally {
           isRefreshing = false;
@@ -123,6 +120,8 @@ export const apiRequest = async <T>(
         toast.error(errorMessage);
       } else if (status === 403) {
         toast.error("You don't have permission to perform this action");
+      } else if (status === 400) {
+        toast.error(errorMessage);
       } else if (status === 404) {
         toast.error("Resource not found");
       } else if (typeof status === "number" && status >= 500) {

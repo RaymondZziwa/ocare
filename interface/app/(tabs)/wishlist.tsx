@@ -204,7 +204,7 @@ export default function WishlistScreen() {
           )}
         </ScrollView>
 
-        <BottomNavigation activeTab="store" />
+        <BottomNavigation activeTab="home" />
       </View>
     </SafeAreaView>
   );

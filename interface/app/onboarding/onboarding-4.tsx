@@ -1,152 +1,89 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import { Sparkles } from 'lucide-react-native';
+import OnboardingLayout from '@/components/onboarding/OnboardingLayout';
+import { markOnboardingComplete } from '@/constants/onboarding';
 import { useRouter } from 'expo-router';
+import { Sparkles } from 'lucide-react-native';
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
-interface OnboardingScreen4Props {
-  onGetStarted?: () => void;
-}
-
-export default function OnboardingScreen4({ onGetStarted }: OnboardingScreen4Props) {
+export default function OnboardingScreen4() {
   const router = useRouter();
-  
-  const handleGetStarted = () => {
-    if (onGetStarted) {
-      onGetStarted();
-    }
-    router.push('/auth/sign-in');
+
+  const handleGetStarted = async () => {
+    await markOnboardingComplete();
+    router.replace('/auth/sign-in' as any);
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.iconContainer}>
-        <Sparkles size={80} color="#1da250" />
-      </View>
-      
-      <Text style={styles.title}>Ready to Start?</Text>
-      
-      <Text style={styles.description}>
-        Join thousands of satisfied customers who have transformed their healthcare experience. 
-        Your journey to better health and convenient pharmacy services begins now. 
-        Get personalized care, fast delivery, and comprehensive health management.
-      </Text>
-      
-      <View style={styles.stats}>
-        <View style={styles.stat}>
-          <Text style={styles.statNumber}>50K+</Text>
-          <Text style={styles.statLabel}>Happy Customers</Text>
-        </View>
-        <View style={styles.stat}>
-          <Text style={styles.statNumber}>24/7</Text>
-          <Text style={styles.statLabel}>Support Available</Text>
-        </View>
-        <View style={styles.stat}>
-          <Text style={styles.statNumber}>99%</Text>
-          <Text style={styles.statLabel}>Satisfaction Rate</Text>
-        </View>
-      </View>
-      
-      <TouchableOpacity 
-        style={styles.getStartedButton} 
-        onPress={handleGetStarted}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.getStartedText}>Get Started</Text>
-      </TouchableOpacity>
-      
-      <Text style={styles.footerText}>
-        By continuing, you agree to our Terms of Service and Privacy Policy
-      </Text>
-    </View>
+    <OnboardingLayout
+      step={4}
+      icon={Sparkles}
+      title="You're all set"
+      description="Join thousands of people who manage their pharmacy needs smarter — with care, speed, and peace of mind."
+      showBack
+      onBack={() => router.back()}
+      showSkip={false}
+      primaryLabel="Get started"
+      onPrimaryPress={handleGetStarted}
+      footer={
+        <>
+          <View style={styles.statsRow}>
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>50K+</Text>
+              <Text style={styles.statLabel}>Happy customers</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>24/7</Text>
+              <Text style={styles.statLabel}>Support</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>99%</Text>
+              <Text style={styles.statLabel}>Satisfaction</Text>
+            </View>
+          </View>
+
+          <Text style={styles.legalText}>
+            By continuing, you agree to our Terms of Service and Privacy Policy.
+          </Text>
+        </>
+      }
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  iconContainer: {
-    marginBottom: 30,
-    padding: 20,
-    borderRadius: 50,
-    backgroundColor: '#f0fdf4',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  description: {
-    fontSize: 16,
-    color: '#6b7280',
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 30,
-  },
-  stats: {
+  statsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-    marginBottom: 30,
+    gap: 10,
+    marginBottom: 18,
   },
-  stat: {
+  statCard: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.95)',
   },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
+  statValue: {
+    fontSize: 20,
+    fontWeight: '700',
     color: '#1da250',
-    marginBottom: 5,
+    marginBottom: 4,
   },
   statLabel: {
+    fontSize: 11,
+    lineHeight: 14,
+    color: '#64748b',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  legalText: {
     fontSize: 12,
-    color: '#6b7280',
+    lineHeight: 18,
+    color: '#94a3b8',
     textAlign: 'center',
-  },
-  imageContainer: {
-    width: '100%',
-    height: 180,
-    borderRadius: 15,
-    overflow: 'hidden',
-    backgroundColor: '#f9fafb',
-    marginBottom: 30,
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  getStartedButton: {
-    backgroundColor: '#1da250',
-    paddingVertical: 18,
-    paddingHorizontal: 60,
-    borderRadius: 30,
-    marginBottom: 20,
-    shadowColor: '#1da250',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  getStartedText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  footerText: {
-    fontSize: 12,
-    color: '#9ca3af',
-    textAlign: 'center',
-    lineHeight: 16,
+    marginBottom: 8,
   },
 });

@@ -38,6 +38,7 @@ import StoreInventoryReducer from "./slices/inventory/storeInventorySlice";
 import StoreReducer from "./slices/inventory/storeSlice";
 import SupplierReducer from "./slices/inventory/supplierSlice";
 import UnitReducer from "./slices/inventory/unitSlice";
+import bannerReducer from "./slices/bannerSlice";
 import ManufacturingReducer from "./slices/manufacturing/manufacturingSlice";
 import ProjectSaleReducer from "./slices/projects/projectSaleSlice";
 import ProjectReducer from "./slices/projects/projectSlice";
@@ -96,6 +97,7 @@ export const store = configureStore({
     supplier: SupplierReducer,
     manufacturing: ManufacturingReducer,
     cart: cartReducer,
+    banner: bannerReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

@@ -10,6 +10,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { MailService } from 'src/mail/mail.service';
 import { JwtRefreshStrategy } from 'src/guards/jwt-refresh.strategy';
 import { JwtStrategy } from 'src/guards/jwt.strategy';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { JwtStrategy } from 'src/guards/jwt.strategy';
       inject: [ConfigService],
     }),
     PrismaModule,
+    HttpModule,
     ConfigModule, // Make sure ConfigModule is imported
   ],
   controllers: [AuthController],

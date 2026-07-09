@@ -15,6 +15,7 @@ export const SALESENDPOINTS = {
         fetch_all: '/api/sales/fetch-all',
         get_credit_sales: (id: string) => `/api/sales/credit-sales/${id}`,
         collect_payment: `/api/sales/credit-payment`,
+        PING_PAYMENT_STATUS: (reference: string) => `/api/transactions/payment-status/${reference}`
     },
     SERVICEPOS: {
         complete_sale: '/api/service-sales/create',

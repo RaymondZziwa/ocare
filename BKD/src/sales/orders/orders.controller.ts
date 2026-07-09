@@ -1,4 +1,4 @@
-import { Post, Get, Controller } from '@nestjs/common';
+import { Post, Get, Controller, Param, Body } from '@nestjs/common';
 import { AppOrdersService } from './orders.service';
 import { CreateSaleDto } from 'src/dto/pos.dto';
 
@@ -7,9 +7,8 @@ export class AppOrdersController {
   constructor(private readonly appOrderService: AppOrdersService) {}
 
   @Post('place-order')
-  placeAppOrder(createSaleDto: CreateSaleDto) {
-    
-    console.log('Place app order');
+  async placeAppOrder(@Body() createSaleDto: CreateSaleDto) {
+    return this.appOrderService.placeAppOrder(createSaleDto);
   }
 
   @Get('app-pending-orders')
@@ -20,5 +19,15 @@ export class AppOrdersController {
   @Get('app-order-history')
   getAppOrderHistory() {
     return this.appOrderService.appOrderHistory();
+  }
+
+  @Get('payment-status/:transactionId')
+  async getPaymentStatus(@Param('transactionId') transactionId: string) {
+    return this.appOrderService.getPaymentStatus(transactionId);
+  }
+
+  @Get('user-orders/:userId')
+  async getUserAppOrders(@Param('userId') userId: string) {
+    return this.appOrderService.getAppUserOrders(userId);
   }
 }

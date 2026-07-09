@@ -9,6 +9,9 @@ export default function TabLayout() {
 <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="refill" />
+      <Stack.Screen name="cart" />
+      <Stack.Screen name="wishlist" />
+      <Stack.Screen name="store" />
       <Stack.Screen name="profile" />
     </Stack>
     </Provider>

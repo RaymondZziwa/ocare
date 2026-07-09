@@ -14,7 +14,7 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { collectPayment } from 'src/utils/payments/collectPayment';
 
-interface CollectionResponse {
+export interface CollectionResponse {
   status: string;
   message: string;
 

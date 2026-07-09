@@ -9,12 +9,14 @@ import {
   UseGuards,
   Get,
   UnauthorizedException,
+  Param,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { AuthDto } from 'src/dto/auth.dto';
 import { JwtAuthGuard } from 'src/guards/authGuard.guard';
 import { RefreshAuthGuard } from 'src/guards/refreshTokenGuard.guard';
+import { AppLoginDto, AppRegisterDto } from 'src/dto/appAuth.dto';
 
 // Define the user type that matches what your guards return
 interface AuthUser {
@@ -82,55 +84,6 @@ export class AuthController {
     });
 
     console.log(userData);
-    // Remove tokens from the response since they're in cookies
-    return {
-      message: 'Login successful',
-      user: userData,
-    };
-  }
-
-  @HttpCode(200)
-  @Post('pbd/login')
-  async Pbdlogin(
-    @Body() loginDto: AuthDto,
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const authResult = await this.authService.pbdLogin(loginDto);
-    const { token, ...userData } = authResult;
-
-    const forwardedProto = req.headers['x-forwarded-proto'];
-    const isForwardedHttps =
-      typeof forwardedProto === 'string'
-        ? forwardedProto.includes('https')
-        : false;
-
-    const origin = req.headers.origin;
-    const isHttpsOrigin =
-      typeof origin === 'string' ? origin.startsWith('https://') : false;
-
-    const isHttpsRequest = req.secure || isForwardedHttps;
-    const useCrossSiteCookies =
-      isHttpsRequest || process.env.NODE_ENV === 'production' || isHttpsOrigin;
-
-    const sameSite: 'none' | 'lax' = useCrossSiteCookies ? 'none' : 'lax';
-    const cookieOptions = {
-      httpOnly: true,
-      secure: useCrossSiteCookies,
-      sameSite,
-    };
-
-    // Set HTTP-only cookies
-    res.cookie('accessToken', token.accessToken, {
-      ...cookieOptions,
-      maxAge: 86400000, // 1 day
-    });
-
-    res.cookie('refreshToken', token.refreshToken, {
-      ...cookieOptions,
-      maxAge: 7 * 86400000, // 7 days
-    });
-
     // Remove tokens from the response since they're in cookies
     return {
       message: 'Login successful',
@@ -270,5 +223,21 @@ export class AuthController {
       status: 200,
       message: 'Logout successful',
     };
+  }
+
+  //Mobile App
+  @Post('mobile-login')
+  async mobileLogin(@Body() data: AppLoginDto) {
+    return this.authService.appLogin(data);
+  }
+
+  @Post('mobile-register')
+  async mobileRegister(@Body() data: AppRegisterDto) {
+    return this.authService.appRegister(data);
+  }
+
+  @Get('mobile-profile/:id')
+  async mobileProfile(@Param('id') id: string) {
+    return this.authService.getAppUserProfile(id);
   }
 }

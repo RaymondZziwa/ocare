@@ -83,6 +83,61 @@ export class WalletService {
     });
   }
 
+  async toggleAppWallet(id: string): Promise<GenericResponse> {
+    return await this.prismaService.$transaction(async (tx) => {
+      // Find the wallet to toggle
+      const wallet = await tx.wallet.findUnique({
+        where: { id: parseInt(id) },
+      });
+
+      if (!wallet) {
+        throw new NotFoundException(`Wallet with ID ${id} not found`);
+      }
+
+      // If we're setting this wallet to true, we need to set all other wallets to false
+      if (wallet.isForAppSales === false) {
+        // Set all other wallets to false first
+        await tx.wallet.updateMany({
+          where: {
+            id: { not: parseInt(id) },
+            isForAppSales: true,
+          },
+          data: {
+            isForAppSales: false,
+          },
+        });
+
+        // Now set this wallet to true
+        const updatedWallet = await tx.wallet.update({
+          where: { id: parseInt(id) },
+          data: {
+            isForAppSales: true,
+          },
+        });
+
+        return {
+          status: 200,
+          data: updatedWallet,
+          message: 'Wallet set as app sales wallet successfully',
+        };
+      } else {
+        // If setting to false, just update this wallet
+        const updatedWallet = await tx.wallet.update({
+          where: { id: parseInt(id) },
+          data: {
+            isForAppSales: false,
+          },
+        });
+
+        return {
+          status: 200,
+          data: updatedWallet,
+          message: 'Wallet toggled successfully',
+        };
+      }
+    });
+  }
+
   async update(
     id: number,
     data: { name?: string; location?: string },

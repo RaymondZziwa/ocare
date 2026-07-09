@@ -10,6 +10,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Toaster } from 'sonner-native';
 import { store } from '@/redux/store';
 import { Provider } from 'react-redux';
+import { AuthProvider } from '@/context/AuthContext';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -20,9 +21,10 @@ export default function RootLayout() {
 
   return (
     <Provider store={store}>
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaProvider>
-      <Toaster 
+      <Toaster
           position="top-center"
           richColors
           duration={3000}
@@ -30,14 +32,22 @@ export default function RootLayout() {
       <PaperProvider>
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
             <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        <Stack.Screen name="auth/sign-in" options={{ headerShown: false }} />
+        <Stack.Screen name="auth/sign-up" options={{ headerShown: false }} />
+        <Stack.Screen name="auth/forgot-password" options={{ headerShown: false }} />
+        <Stack.Screen name="auth/email-verification" options={{ headerShown: false }} />
+        <Stack.Screen name="auth/password-reset" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+        <Stack.Screen name="payment" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
         </ThemeProvider>
         </PaperProvider>
       </SafeAreaProvider>
       </GestureHandlerRootView>
+      </AuthProvider>
       </Provider>
   );
 }

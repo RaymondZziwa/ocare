@@ -83,9 +83,9 @@ export class StoreService {
     };
   }
 
-  async toggleStore(id: string, branchId: string): Promise<GenericResponse> {
+  async toggleStore(id: string): Promise<GenericResponse> {
     const store = await this.prismaService.store.findUnique({
-      where: { id, branchId },
+      where: { id },
     });
 
     await this.prismaService.store.updateMany({
@@ -100,6 +100,34 @@ export class StoreService {
       },
       data: {
         isForSales: true,
+      },
+    });
+
+    return {
+      status: 200,
+      data: store,
+      message: 'Store toggled successfully',
+    };
+  }
+
+  async toggleAppStore(id: string): Promise<GenericResponse> {
+    console.log('id', id)
+    const store = await this.prismaService.store.findUnique({
+      where: { id },
+    });
+
+    await this.prismaService.store.updateMany({
+      data: {
+        isForAppSales: false,
+      },
+    });
+
+    await this.prismaService.store.update({
+      where: {
+        id: store?.id,
+      },
+      data: {
+        isForAppSales: true,
       },
     });
 

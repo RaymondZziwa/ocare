@@ -11,6 +11,8 @@ import {
     ActivityIndicator,
 } from 'react-native';
 import { CheckCircle, XCircle, Smartphone, Clock, AlertTriangle } from 'lucide-react-native';
+import { SALESENDPOINTS } from '@/endpoints/sales/salesEndpoints';
+import { apiRequest } from '@/libs/apiConfig';
 
 interface PaymentWaitingModalProps {
     visible: boolean;

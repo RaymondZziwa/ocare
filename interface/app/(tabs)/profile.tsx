@@ -2,154 +2,331 @@ import { useRouter } from "expo-router";
 import {
     ChevronRight,
     Edit,
-    FileText,
     LogOut,
+    MapPin,
     Package,
-    Settings,
+    Phone,
+    User,
 } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
-    Alert,
+    ActivityIndicator,
+    Image,
     SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
-import { useDispatch, useSelector } from "react-redux";
 import BottomNavigation from "../../components/BottomNavigation";
 import CustomModal from "../../components/CustomModal";
-import { RootState } from "../../redux/store";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner-native";
+import {
+    getProfile,
+    changePassword,
+    calculatePasswordStrength,
+    validatePasswordChange,
+    type UserProfile,
+    type ChangePasswordRequest,
+} from "@/services/profileService";
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const dispatch = useDispatch();
+  const { logout } = useAuth();
   const [showSignOutModal, setShowSignOutModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
+  const [isSaving, setIsSaving] = useState(false);
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
 
-  // Get user data from Redux store
-  const userAuth = useSelector((state: RootState) => state.userAuth);
-  const { data: userData } = userAuth;
+  // Profile data state
+  const [profileData, setProfileData] = useState<UserProfile | null>(null);
+
+  // Password change state
+  const [passwordData, setPasswordData] = useState<ChangePasswordRequest>({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
 
   // Format member since date
-  const memberSince = userData.createdAt
-    ? new Date(userData.createdAt).toLocaleDateString("en-US", {
+  const memberSince = profileData?.createdAt
+    ? new Date(profileData.createdAt).toLocaleDateString("en-US", {
         month: "long",
         year: "numeric",
       })
     : "Unknown";
 
   // Generate member ID from user ID
-  const memberId = userData.id ? `MEM-${userData.id}` : "MEM-000000";
+  const memberId = profileData?.id ? `MEM-${profileData.id.slice(0, 8)}` : "MEM-000000";
 
-  const handleEditProfile = () => {
-    Alert.alert("Edit Profile", "Profile editing feature coming soon!");
-  };
+  // Load profile data
+  const loadProfile = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await getProfile(user?.id);
+      console.log(data)
+      setProfileData(data.data);
+    } catch (error) {
+      console.error("Failed to load profile:", error);
+      toast.error("Failed to load profile data");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-  const handlePrivacy = () => {
-    router.push("/profile/privacy" as any);
-  };
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
 
-  const handleSecurity = () => {
-    router.push("/profile/security" as any);
+  const handleOrderHistory = () => {
+    router.push("/profile/orders" as any);
   };
 
   const handlePrescriptions = () => {
     router.push("/profile/prescriptions" as any);
   };
 
-  const handleOrderHistory = () => {
-    router.push("/profile/orders" as any);
+  const handlePrivacy = () => {
+    router.push("/profile/privacy" as any);
   };
 
-  const handleCamera = () => {
-    Alert.alert("Change Photo", "Camera feature coming soon!");
+  const handleEditProfile = () => {
+    router.push("/profile/edit" as any);
   };
 
   const handleSignOut = () => {
     setShowSignOutModal(true);
   };
 
-  const confirmSignOut = () => {
-    dispatch(logout());
+  const confirmSignOut = async () => {
+    await logout();
     router.replace("/auth/sign-in");
   };
 
+
+  const handleChangePassword = async () => {
+    const errors = validatePasswordChange(passwordData);
+    if (errors.length > 0) {
+      toast.error(errors[0]);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await changePassword(passwordData);
+      toast.success("Password changed successfully");
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      setShowPasswordSection(false);
+    } catch (error) {
+      console.error("Failed to change password:", error);
+      toast.error("Failed to change password");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const passwordStrength = calculatePasswordStrength(passwordData.newPassword);
+
   const menuItems = [
-    {
-      icon: <Settings size={20} color="#6b7280" />,
-      title: "Privacy & Security",
-      subtitle: "Manage your privacy settings",
-      onPress: handlePrivacy,
-    },
     {
       icon: <Package size={20} color="#6b7280" />,
       title: "Order History",
       subtitle: "View your past orders",
       onPress: handleOrderHistory,
     },
-    {
-      icon: <FileText size={20} color="#6b7280" />,
-      title: "Past Prescriptions",
-      subtitle: "View your prescription history",
-      onPress: handlePrescriptions,
-    },
   ];
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#1da250" />
+          <Text style={styles.loadingText}>Loading profile...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container}>
+        {/* Profile Header */}
         <View style={styles.header}>
-          <View style={styles.profileSection}>
-            <View style={styles.userInfo}>
-              <Text style={styles.userName}>
-                {userData.fullName || "Guest User"}
-              </Text>
-              <Text style={styles.memberInfo}>Member ID: {memberId}</Text>
-              <Text style={styles.memberInfo}>Member since: {memberSince}</Text>
+          <View style={styles.avatarSection}>
+            <View style={styles.avatarContainer}>
+              {profileData?.profileImage ? (
+                <Image
+                  source={{ uri: profileData.profileImage }}
+                  style={styles.avatar}
+                />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <User size={40} color="#9ca3af" />
+                </View>
+              )}
             </View>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={handleEditProfile}
-            >
+            <View style={styles.headerInfo}>
+              <Text style={styles.userName}>{profileData?.fullName || "Guest User"}</Text>
+              <Text style={styles.memberId}>Member ID: {memberId}</Text>
+              <Text style={styles.memberSince}>Member since: {memberSince}</Text>
+            </View>
+            <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
               <Edit size={16} color="#1da250" />
-              <Text style={styles.editButtonText}>Edit Profile</Text>
+              <Text style={styles.editButtonText}>Edit</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        <View style={styles.infoSection}>
-          <Text style={styles.sectionTitle}>Personal Information</Text>
-
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Full Name</Text>
-            <Text style={styles.infoValue}>
-              {userData.fullName || "Not provided"}
-            </Text>
+        {/* Personal Information Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Personal Information</Text>
+            <TouchableOpacity onPress={() => setShowPasswordSection(!showPasswordSection)}>
+              <Text style={styles.changePasswordText}>Change Password</Text>
+            </TouchableOpacity>
           </View>
 
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Email</Text>
-            <Text style={styles.infoValue}>
-              {userData.email || "Not provided"}
-            </Text>
-          </View>
+          <View style={styles.infoList}>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Full Name</Text>
+              <Text style={styles.infoValue}>{profileData?.fullName || "Not provided"}</Text>
+            </View>
 
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Phone</Text>
-            <Text style={styles.infoValue}>
-              {userData.phone || "Not provided"}
-            </Text>
-          </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>First Name</Text>
+              <Text style={styles.infoValue}>{profileData?.firstName || "Not provided"}</Text>
+            </View>
 
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Member Since</Text>
-            <Text style={styles.infoValue}>{memberSince}</Text>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Last Name</Text>
+              <Text style={styles.infoValue}>{profileData?.lastName || "Not provided"}</Text>
+            </View>
+
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Date of Birth</Text>
+              <Text style={styles.infoValue}>{profileData?.dob || "Not provided"}</Text>
+            </View>
+
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Gender</Text>
+              <Text style={styles.infoValue}>{profileData?.gender?.replace("_", " ") || "Not provided"}</Text>
+            </View>
+
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Phone Number</Text>
+              <View style={styles.infoValueWithIcon}>
+                <Phone size={16} color="#9ca3af" style={styles.infoIcon} />
+                <Text style={styles.infoValue}>{profileData?.phone || "Not provided"}</Text>
+              </View>
+            </View>
+
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Email Address</Text>
+              <Text style={styles.infoValue}>{profileData?.email || "Not provided"}</Text>
+            </View>
+
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Physical Address</Text>
+              <View style={styles.infoValueWithIcon}>
+                <MapPin size={16} color="#9ca3af" style={styles.infoIcon} />
+                <Text style={styles.infoValue}>{profileData?.address || "Not provided"}</Text>
+              </View>
+            </View>
           </View>
         </View>
 
-        <View style={styles.menuSection}>
-          <Text style={styles.sectionTitle}>Account Settings</Text>
+        {/* Password Change Section */}
+        {showPasswordSection && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Change Password</Text>
+              <TouchableOpacity onPress={() => setShowPasswordSection(false)}>
+                <Text style={styles.closeText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.form}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Current Password</Text>
+                <TextInput
+                  style={styles.input}
+                  value={passwordData.currentPassword}
+                  onChangeText={(text) =>
+                    setPasswordData({ ...passwordData, currentPassword: text })
+                  }
+                  placeholder="Enter current password"
+                  secureTextEntry
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>New Password</Text>
+                <TextInput
+                  style={styles.input}
+                  value={passwordData.newPassword}
+                  onChangeText={(text) =>
+                    setPasswordData({ ...passwordData, newPassword: text })
+                  }
+                  placeholder="Enter new password"
+                  secureTextEntry
+                />
+                {passwordData.newPassword && (
+                  <View style={styles.passwordStrength}>
+                    <View style={styles.strengthBar}>
+                      {[0, 1, 2, 3, 4].map((level) => (
+                        <View
+                          key={level}
+                          style={[
+                            styles.strengthSegment,
+                            level < passwordStrength.score && styles.strengthSegmentActive,
+                          ]}
+                        />
+                      ))}
+                    </View>
+                    <Text style={styles.strengthText}>{passwordStrength.feedback}</Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Confirm New Password</Text>
+                <TextInput
+                  style={styles.input}
+                  value={passwordData.confirmPassword}
+                  onChangeText={(text) =>
+                    setPasswordData({ ...passwordData, confirmPassword: text })
+                  }
+                  placeholder="Confirm new password"
+                  secureTextEntry
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+                onPress={handleChangePassword}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text style={styles.saveButtonText}>Change Password</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Account Settings */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>History</Text>
 
           {menuItems.map((item, index) => (
             <TouchableOpacity
@@ -168,6 +345,8 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           ))}
         </View>
+
+        {/* Sign Out */}
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
           <LogOut size={20} color="#ffffff" />
           <Text style={styles.signOutButtonText}>Sign Out</Text>
@@ -199,53 +378,46 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#ffffff",
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#6b7280",
+  },
   header: {
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#ffffff",
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
   },
-  profileSection: {
+  avatarSection: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 20,
+    justifyContent: "space-between",
   },
-  imageContainer: {
+  avatarContainer: {
     position: "relative",
-    marginRight: 16,
   },
-  imageButton: {
+  avatar: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#e5e7eb",
+  },
+  avatarPlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#f3f4f6",
     justifyContent: "center",
     alignItems: "center",
   },
-  cameraOverlay: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    backgroundColor: "#1da250",
-    borderRadius: 12,
-    width: 28,
-    height: 28,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  userInfo: {
+  headerInfo: {
     flex: 1,
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#1f2937",
-    marginBottom: 4,
-  },
-  memberInfo: {
-    fontSize: 14,
-    color: "#6b7280",
-    marginBottom: 2,
+    marginLeft: 16,
   },
   editButton: {
     flexDirection: "row",
@@ -254,22 +426,57 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
-    alignSelf: "flex-start",
   },
   editButtonText: {
     color: "#1da250",
     fontSize: 14,
-    fontWeight: "500",
-    marginLeft: 8,
+    fontWeight: "600",
+    marginLeft: 4,
   },
-  infoSection: {
+  userName: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#1f2937",
+    marginBottom: 4,
+  },
+  memberId: {
+    fontSize: 14,
+    color: "#6b7280",
+    marginBottom: 2,
+  },
+  memberSince: {
+    fontSize: 14,
+    color: "#6b7280",
+  },
+  section: {
     padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f3f4f6",
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  changePasswordText: {
+    fontSize: 14,
+    color: "#1da250",
+    fontWeight: "500",
+  },
+  closeText: {
+    fontSize: 14,
+    color: "#6b7280",
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "600",
     color: "#1f2937",
-    marginBottom: 16,
+  },
+  infoList: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    padding: 16,
   },
   infoItem: {
     flexDirection: "row",
@@ -277,25 +484,84 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#f3f4f6",
+    borderBottomColor: "#e5e7eb",
   },
   infoLabel: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#6b7280",
     fontWeight: "500",
-    flex: 1,
   },
   infoValue: {
     fontSize: 16,
     color: "#1f2937",
     fontWeight: "400",
-    flex: 2,
-    textAlign: "right",
   },
-  menuSection: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: "#f3f4f6",
+  infoValueWithIcon: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  infoIcon: {
+    marginRight: 8,
+  },
+  form: {
+    marginBottom: 16,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#6b7280",
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: "#1f2937",
+    backgroundColor: "#ffffff",
+  },
+  passwordStrength: {
+    marginTop: 8,
+  },
+  strengthBar: {
+    flexDirection: "row",
+    gap: 4,
+    marginBottom: 4,
+  },
+  strengthSegment: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#e5e7eb",
+  },
+  strengthSegmentActive: {
+    backgroundColor: "#1da250",
+  },
+  strengthText: {
+    fontSize: 12,
+    color: "#6b7280",
+  },
+  saveButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#1da250",
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  saveButtonDisabled: {
+    backgroundColor: "#9ca3af",
+  },
+  saveButtonText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "600",
+    marginLeft: 8,
   },
   menuItem: {
     flexDirection: "row",
@@ -336,14 +602,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#dc2626",
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 12,
-    marginBottom: 10,
-    width: "80%",
-    alignSelf: "center",
-    borderWidth: 1,
-    borderColor: "#dc2626",
+    margin: 20,
+    marginBottom: 40,
   },
   signOutButtonText: {
     fontSize: 16,

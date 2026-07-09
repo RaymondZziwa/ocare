@@ -99,8 +99,13 @@ export class StoresController {
     return this.storeService.remove(id);
   }
 
-  @Put('toogle-store/:id/:branchId')
-  toggleStore(@Param('id') id: string, @Param('branchId') branchId: string) {
-    return this.storeService.toggleStore(id, branchId);
+  @Put('toogle-store/:id')
+  toggleStore(@Param('id') id: string) {
+    return this.storeService.toggleStore(id);
+  }
+
+  @Put('toogle-app-store/:id')
+  toggleAppStore(@Param('id') id: string) {
+    return this.storeService.toggleAppStore(id);
   }
 }

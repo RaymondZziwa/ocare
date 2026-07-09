@@ -341,7 +341,7 @@ export default function ProductDetailsScreen() {
           </View>
         </ScrollView>
 
-        <BottomNavigation activeTab="store" />
+        <BottomNavigation activeTab="home" />
       </View>
     </SafeAreaView>
   );

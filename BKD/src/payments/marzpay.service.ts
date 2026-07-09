@@ -3,6 +3,7 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { firstValueFrom } from 'rxjs';
+import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class MarzPayService {
@@ -78,6 +79,37 @@ export class MarzPayService {
 
   private async handleSuccessfulPayment(salePayment: any, amount: number) {
     await this.prisma.$transaction(async (tx) => {
+      const sale = await tx.sale.findUniqueOrThrow({
+        where: {
+          id: salePayment?.saleId,
+        },
+      });
+      let wallet: {
+        id: number;
+        updatedAt: Date;
+        createdAt: Date;
+        name: string;
+        balance: Decimal;
+        purpose: string | null;
+        isForSales: boolean;
+        isForAppSales: boolean;
+        canBeDeleted: boolean;
+      } | null;
+
+      if (sale.type === 'APP') {
+        wallet = await tx.wallet.findFirst({
+          where: {
+            isForAppSales: true,
+          },
+        });
+      } else {
+        wallet = await tx.wallet.findFirst({
+          where: {
+            isForSales: true,
+          },
+        });
+      }
+
       // Update sale status to fully paid
       await tx.sale.update({
         where: { id: salePayment.saleId },
@@ -87,14 +119,9 @@ export class MarzPayService {
         },
       });
 
-      // Find and update sales wallet
-      const salesWallet = await tx.wallet.findFirst({
-        where: { isForSales: true },
-      });
-
-      if (salesWallet) {
+      if (wallet) {
         await tx.wallet.update({
-          where: { id: salesWallet.id },
+          where: { id: wallet.id },
           data: {
             balance: {
               increment: amount,

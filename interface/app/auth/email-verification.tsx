@@ -1,11 +1,13 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Keyboard, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Pressable, Keyboard, StatusBar } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Mail } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Mail, Sparkles } from 'lucide-react-native';
 import { toast } from 'sonner-native';
 
 export default function EmailVerificationScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [code, setCode] = useState(['', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -79,93 +81,166 @@ export default function EmailVerificationScreen() {
   };
 
   return (
-    <Pressable style={styles.container} onPress={handleDismissKeyboard}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Verify Email</Text>
-          <Text style={styles.subtitle}>Enter the 4-digit code sent to your email</Text>
-        </View>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+    >
+      <Pressable style={styles.container} onPress={handleDismissKeyboard}>
+        <View style={[styles.gradientBackground, { paddingTop: insets.top }]}>
+          <StatusBar barStyle="dark-content" backgroundColor="#f0fdf4" />
+          <View style={styles.decorativeCircle1} />
+          <View style={styles.decorativeCircle2} />
+          <View style={styles.decorativeCircle3} />
 
-        <View style={styles.form}>
-          <Text style={styles.instructionText}>
-            We've sent a verification code to your email address. Please check your inbox and enter the code below.
-          </Text>
-
-          <View style={styles.codeContainer}>
-            {code.map((digit, index) => (
-              <TextInput
-                key={index}
-                ref={inputRefs[index]}
-                style={styles.codeInput}
-                value={digit}
-                onChangeText={(value) => handleCodeChange(index, value)}
-                keyboardType="number-pad"
-                maxLength={1}
-                textAlign="center"
-                secureTextEntry={false}
-              />
-            ))}
-          </View>
-
-          <TouchableOpacity
-            style={[styles.button, isLoading && styles.buttonDisabled]}
-            onPress={handleVerify}
-            disabled={isLoading}
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
-            <Text style={styles.buttonText}>
-              {isLoading ? 'Verifying...' : 'Verify Email'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+            <View style={styles.header}>
+              <View style={styles.logoContainer}>
+                <Sparkles size={32} color="#1da250" />
+              </View>
+              <Text style={styles.title}>Verify Email</Text>
+              <Text style={styles.subtitle}>Enter the 4-digit code sent to your email</Text>
+            </View>
 
-        <View style={styles.footer}>
-          <TouchableOpacity onPress={handleResend} disabled={isLoading}>
-            <Text style={styles.resendText}>Didn't receive code? Resend</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity onPress={handleBack}>
-            <Text style={styles.backText}>Back</Text>
-          </TouchableOpacity>
+            <View style={styles.formCard}>
+              <View style={styles.form}>
+                <Text style={styles.instructionText}>
+                  We've sent a verification code to your email address. Please check your inbox and enter the code below.
+                </Text>
+
+                <View style={styles.codeContainer}>
+                  {code.map((digit, index) => (
+                    <TextInput
+                      key={index}
+                      ref={inputRefs[index]}
+                      style={styles.codeInput}
+                      value={digit}
+                      onChangeText={(value) => handleCodeChange(index, value)}
+                      keyboardType="number-pad"
+                      maxLength={1}
+                      textAlign="center"
+                      secureTextEntry={false}
+                      editable={!isLoading}
+                    />
+                  ))}
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.button, isLoading && styles.buttonDisabled]}
+                  onPress={handleVerify}
+                  disabled={isLoading}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.buttonText}>
+                    {isLoading ? 'Verifying...' : 'Verify Email'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.footer}>
+              <TouchableOpacity onPress={handleResend} disabled={isLoading}>
+                <Text style={styles.resendText}>Didn't receive code? Resend</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity onPress={handleBack} disabled={isLoading}>
+                <Text style={styles.backText}>Back</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </View>
-      </View>
-    </Pressable>
+      </Pressable>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
   },
-  content: {
+  gradientBackground: {
     flex: 1,
-    paddingHorizontal: 30,
-    justifyContent: 'center',
+    backgroundColor: '#f0fdf4',
+  },
+  decorativeCircle1: {
+    position: 'absolute',
+    top: -100,
+    right: -80,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: 'rgba(29, 162, 80, 0.08)',
+  },
+  decorativeCircle2: {
+    position: 'absolute',
+    bottom: 150,
+    left: -100,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(34, 197, 94, 0.06)',
+  },
+  decorativeCircle3: {
+    position: 'absolute',
+    top: '40%',
+    right: 40,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    paddingBottom: 32,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 32,
+  },
+  logoContainer: {
+    marginBottom: 24,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 36,
+    fontWeight: '800',
     color: '#1f2937',
-    marginBottom: 8,
+    marginBottom: 12,
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
     color: '#6b7280',
-    marginBottom: 20,
+    textAlign: 'center',
+    lineHeight: 24,
+    paddingHorizontal: 20,
+  },
+  formCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 24,
+    padding: 28,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
   },
   form: {
     width: '100%',
   },
   instructionText: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#6b7280',
     marginBottom: 30,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 22,
   },
   codeContainer: {
     flexDirection: 'row',
@@ -175,50 +250,51 @@ const styles = StyleSheet.create({
   codeInput: {
     width: 70,
     height: 60,
-    backgroundColor: '#f9fafb',
-    borderRadius: 12,
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
     fontSize: 24,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#1f2937',
     textAlign: 'center',
     borderWidth: 2,
-    borderColor: '#e5e7eb',
+    borderColor: 'transparent',
   },
   button: {
     backgroundColor: '#1da250',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 18,
+    borderRadius: 16,
     alignItems: 'center',
     shadowColor: '#1da250',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
   },
   buttonDisabled: {
     backgroundColor: '#9ca3af',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   buttonText: {
     color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: 0.8,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 20,
+    marginTop: 24,
+    marginBottom: 32,
   },
   resendText: {
     color: '#1da250',
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 15,
+    fontWeight: '800',
   },
   backText: {
     color: '#6b7280',
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

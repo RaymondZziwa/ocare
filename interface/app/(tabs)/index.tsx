@@ -1,11 +1,11 @@
 import useItemCategories from "@/hooks/useItemCategories";
 import useItems from "@/hooks/useItems";
+import useBanners from "@/hooks/useBanners";
 import { baseURL } from "@/libs/apiConfig";
 import { useRouter } from "expo-router";
 import { Heart, Plus, Search, ShoppingCart } from "lucide-react-native";
 import React, { useState } from "react";
 import {
-  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -39,6 +39,7 @@ export default function StoreScreen() {
   const router = useRouter();
   const { data: categories } = useItemCategories();
   const { data: medicines } = useItems();
+  //const { data: banners } = useBanners();
   const { addItem, count: cartCount } = useCart(); // Use the useCart hook
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -51,6 +52,7 @@ export default function StoreScreen() {
       name: medicine.name,
       sellingPrice: medicine.sellingPrice,
       image: medicine.image || null,
+      unitId: medicine.unitId,
       description: `Category: ${medicine.category?.name || "Unknown"}`,
     });
     toast.success("Item has been added to your cart");
@@ -89,7 +91,7 @@ export default function StoreScreen() {
 
   // Get popular items (if you have an isPopular flag)
   const popularItems = medicines.filter(
-    (medicine) =>
+    (medicine: any) =>
       medicine.isPopular &&
       (selectedCategory === "all" ||
         medicine.category?.id.toString() === selectedCategory),
@@ -97,7 +99,7 @@ export default function StoreScreen() {
 
   // Regular items are the filtered ones that are not popular
   const regularItems = filteredMedicines.filter(
-    (medicine) => !medicine.isPopular,
+    (medicine: any) => !medicine.isPopular,
   );
 
   const MedicineCard = ({ medicine }: { medicine: any }) => {
@@ -195,6 +197,42 @@ export default function StoreScreen() {
               </TouchableOpacity>
             </View>
           </View>
+
+          {/* Banner Carousel */}
+          {/* {banners && banners.length > 0 ? (
+            <View style={styles.bannerCarousel}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                pagingEnabled
+                style={styles.bannerScroll}
+              >
+                {banners.map((banner: any) => (
+                  <View
+                    key={banner.id}
+                    style={[styles.bannerItem, { backgroundColor: banner.backgroundColor || '#1da250' }]}
+                  >
+                    {banner.imageUrl && (() => {
+                      const imageUrl = getFullImageUrl(banner.imageUrl);
+                      return imageUrl ? (
+                        <Image
+                          source={{ uri: imageUrl }}
+                          style={styles.bannerImage}
+                          resizeMode="cover"
+                        />
+                      ) : null;
+                    })()}
+                    <View style={styles.bannerContent}>
+                      <Text style={styles.bannerTitle}>{banner.title}</Text>
+                      {banner.subtitle && (
+                        <Text style={styles.bannerSubtitle}>{banner.subtitle}</Text>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          ) : null} */}
 
           <ScrollView
             horizontal
@@ -546,5 +584,46 @@ const styles = StyleSheet.create({
     height: 32,
     justifyContent: "center",
     alignItems: "center",
+  },
+  bannerCarousel: {
+    marginHorizontal: 16,
+    marginBottom: 20,
+  },
+  bannerScroll: {
+    borderRadius: 12,
+  },
+  bannerItem: {
+    width: 300,
+    height: 140,
+    backgroundColor: "#1da250",
+    borderRadius: 12,
+    marginRight: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  bannerImage: {
+    position: "absolute",
+    width: "100%",
+    height: "100%",
+  },
+  bannerItem2: {
+    backgroundColor: "#15803d",
+  },
+  bannerContent: {
+    padding: 20,
+    alignItems: "center",
+    zIndex: 1,
+  },
+  bannerTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#ffffff",
+    marginBottom: 8,
+  },
+  bannerSubtitle: {
+    fontSize: 14,
+    color: "#ffffff",
+    opacity: 0.9,
   },
 });

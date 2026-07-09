@@ -122,6 +122,7 @@ enum SaleStatus {
   PENDING
   FAILED
   IN_DELIVERY
+  PACKAGING
   CANCELLED
   SUCCESSFUL
 }
@@ -204,6 +205,7 @@ model Store {
   branchId            String
   deptId              String
   isForSales          Boolean    @default(false)
+  isForAppSales Boolean @default(false)
   branch              Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
   dept                Department @relation(fields: [deptId], references: [id], onDelete: Cascade)
   authorizedPersonnel Json? // Consider normalizing if frequently queried
@@ -543,8 +545,8 @@ model SalePayments {
   paymentMethod                 PaymentMethodType
   referenceId                   String?
   notes                         String?
-  cashierId                     String
-  employee                      Employee                        @relation(fields: [cashierId], references: [id], onDelete: Cascade)
+  cashierId                     String?
+  employee                      Employee?                    @relation(fields: [cashierId], references: [id], onDelete: Cascade)
   updatedAt                     DateTime                        @updatedAt
   createdAt                     DateTime                        @default(now())
   SalePaymentTransactionHistory SalePaymentTransactionHistory[]
@@ -585,8 +587,8 @@ model SalePaymentTransactionHistory {
   notes       String? @db.Text
 
   // Cashier/employee info
-  cashierId String
-  employee  Employee @relation(fields: [cashierId], references: [id], onDelete: Cascade)
+  cashierId String?
+  employee  Employee? @relation(fields: [cashierId], references: [id], onDelete: Cascade)
 
   // Webhook tracking
   webhook_received_at DateTime @default(now())
@@ -612,27 +614,41 @@ model SalePaymentTransactionHistory {
 
 // Clientele optimized
 model Client {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   firstName    String
   lastName     String
+  fullName     String
   dob          DateTime?
   gender       Gender?
-  phone        String?  @unique
-  email String? @unique
+  phone        String?   @unique
+  email        String?   @unique
   address      String?
   profileImage String?
   password     String?
   pin          String?
-  updatedAt    DateTime @updatedAt
-  createdAt    DateTime @default(now())
+  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime  @default(now())
 
   Sales              Sale[]
   ClientPrescription ClientPrescription[]
+  ClientOtp          ClientOtp[]
 
   @@index([firstName, lastName])
   @@index([phone])
   @@index([createdAt])
   @@map("clients")
+}
+
+model ClientOtp {
+  id        String   @id @default(uuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([clientId, createdAt])
+  @@map("client_otps")
 }
 
 model Withdraw {
@@ -696,6 +712,7 @@ model Wallet {
   balance         Decimal           @default(0) @db.Decimal(10, 2)
   createdAt       DateTime          @default(now())
   isForSales      Boolean           @default(false)
+  isForAppSales Boolean @default(false)
   canBeDeleted    Boolean           @default(false)
   updatedAt       DateTime          @updatedAt
   Withdraw        Withdraw[]
@@ -888,4 +905,20 @@ model DeliveryAreas {
   cost      Decimal  @db.Decimal(10, 2)
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
+}
+
+model Banner {
+  id              String   @id @default(uuid())
+  title           String
+  subtitle        String?
+  imageUrl        String?
+  backgroundColor String   @default("#1da250")
+  isActive        Boolean  @default(true)
+  order           Int      @default(0)
+  linkUrl         String?
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+
+  @@index([isActive, order])
+  @@map("banners")
 }

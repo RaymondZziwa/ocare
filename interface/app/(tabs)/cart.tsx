@@ -73,7 +73,7 @@ export default function CartScreen() {
   };
 
   const calculateTax = () => {
-    const tax = Math.round(calculateSubtotal() * 0.075); // 18% VAT
+    const tax = Math.round(calculateSubtotal() * 0.18); // 18% VAT
     console.log("Calculated tax (18%):", tax);
     return tax;
   };
@@ -98,7 +98,7 @@ export default function CartScreen() {
       tax: calculateTax(),
       grandTotal: calculateTotal()
     });
-    Alert.alert("Checkout", "Proceeding to checkout...");
+    router.push("/payment" as any);
   };
 
   const CartItem = ({ item }: { item: any }) => {
@@ -210,7 +210,7 @@ export default function CartScreen() {
               </Text>
               <TouchableOpacity
                 style={styles.continueShoppingButton}
-                onPress={() => router.push("/(tabs)/store" as any)}
+                onPress={() => router.push("/(tabs)" as any)}
               >
                 <Text style={styles.continueShoppingText}>
                   Continue Shopping
@@ -236,7 +236,7 @@ export default function CartScreen() {
                 </View>
 
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Tax (7.5%)</Text>
+                  <Text style={styles.summaryLabel}>Tax (18%)</Text>
                   <Text style={styles.summaryValue}>
                     UGX {calculateTax().toLocaleString()}
                   </Text>
@@ -265,7 +265,7 @@ export default function CartScreen() {
           )}
         </ScrollView>
 
-        <BottomNavigation activeTab="store" />
+        <BottomNavigation activeTab="home" />
       </View>
     </SafeAreaView>
   );

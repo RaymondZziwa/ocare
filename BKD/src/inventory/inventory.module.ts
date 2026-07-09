@@ -19,6 +19,8 @@ import { PdfService } from 'src/utils/pdfGenerator/generator.service';
 import { CompanyService } from 'src/company-profile/profile.service';
 import { BrandController } from './brands/brand.controller';
 import { BrandService } from './brands/brand.service';
+import { BannerController } from './banners/banners.controller';
+import { BannerService } from './banners/banners.service';
 
 @Module({
   controllers: [
@@ -30,6 +32,7 @@ import { BrandService } from './brands/brand.service';
     MeasurementUnitController,
     StockMovementController,
     SupplierController,
+    BannerController,
   ],
   providers: [
     BrandService,
@@ -45,6 +48,7 @@ import { BrandService } from './brands/brand.service';
     SupplierService,
     PdfService,
     CompanyService,
+    BannerService,
   ],
 })
 export class InventoryModule {}

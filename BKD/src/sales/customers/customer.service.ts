@@ -12,7 +12,10 @@ export class ClientService {
 
   async create(dto: CreateClientDto) {
     const client = await this.prisma.client.create({
-      data: dto,
+      data: {
+        ...dto,
+        fullName: `${dto.firstName} ${dto.lastName}`,
+      },
     });
 
     return {
