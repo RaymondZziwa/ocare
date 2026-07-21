@@ -121,24 +121,22 @@ export class ResendMailService {
     pdfBuffer: Buffer,
   ) {
     try {
-      const html = await this.loadTemplate('order-confirmation', {
+      const html = await this.loadTemplate('receipt', {
         firstName: name,
-        orderNumber: orderData.number,
         orderDate: orderData.date,
         orderItems: orderData.items,
         totalAmount: orderData.total,
         year: this.year,
       });
       await this.resend.emails.send({
-        from: this.configService.getOrThrow('FROM_EMAIL'),
+        from: 'sales@ocareug.com',
         to: email,
-        subject: `Order Confirmation #${orderData.number}`,
+        subject: `Your Ocare Order Confirmation`,
         html,
         attachments: [
           {
-            filename: `receipt-${orderData.number}.pdf`,
-            content: pdfBuffer.toString('base64'),
-            //encoding: 'base64',
+            filename: `receipt-${name}.pdf`,
+            content: pdfBuffer,
             contentType: 'application/pdf',
           },
         ],

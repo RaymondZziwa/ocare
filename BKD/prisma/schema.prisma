@@ -735,6 +735,7 @@ model Wallet {
   createdAt       DateTime          @default(now())
   isForSales      Boolean           @default(false)
   isForAppSales   Boolean           @default(false)
+  isForWebSales   Boolean           @default(false)
   canBeDeleted    Boolean           @default(false)
   updatedAt       DateTime          @updatedAt
   Withdraw        Withdraw[]

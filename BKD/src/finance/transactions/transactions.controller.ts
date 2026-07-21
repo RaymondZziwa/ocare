@@ -28,7 +28,7 @@ export class TransactionsController {
   //Transaction status callback endpoint for marz to call and update the transaction status in the database
   @Post('marz-callback')
   marzCallback(@Body() data: any) {
-    console.log('Marz callback data received:', data);
+    //console.log('Marz callback data received:', data);
     return this.transactionService.marzCallback(data);
   }
 

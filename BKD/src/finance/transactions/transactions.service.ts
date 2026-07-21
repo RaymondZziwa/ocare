@@ -7,6 +7,7 @@ import { WithdrawToBankDto } from './dtos/transferToBank.dto';
 import { firstValueFrom } from 'rxjs';
 import { IWebhookCallback } from './types';
 import { MobileMoneyPaymentDto } from './dtos/sendMomo.dto';
+import { MarzPayService } from 'src/payments/marzpay.service';
 
 @Injectable()
 export class TransactionService {
@@ -14,6 +15,7 @@ export class TransactionService {
     private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
+    private readonly marzService: MarzPayService
   ) {}
   private async deductStockForSale(
     saleId: string,
@@ -170,6 +172,8 @@ export class TransactionService {
     }
 
     if (payment.status === 'COMPLETED') {
+      console.log(payment)
+      await this.marzService.handleSuccessfulPayment(payment, parseInt(payment.amount.toString()));
       return {
         status: 200,
         data: {
@@ -180,6 +184,7 @@ export class TransactionService {
     }
 
     if (payment.status === 'FAILED') {
+      await this.marzService.handleSuccessfulPayment(payment, parseInt(payment.amount.toString()));
       return {
         status: 200,
         data: {

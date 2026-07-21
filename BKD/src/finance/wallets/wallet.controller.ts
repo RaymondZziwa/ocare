@@ -39,6 +39,11 @@ export class WalletController {
     return this.walletService.toggleAppWallet(id);
   }
 
+  @Post('toggle-web-wallet/:id')
+  toggleWebWallet(@Param('id') id: string) {
+    return this.walletService.toggleWebWallet(id);
+  }
+
   @Delete('delete/:id')
   remove(@Param('id') id: string) {
     return this.walletService.remove(parseInt(id));

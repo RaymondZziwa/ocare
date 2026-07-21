@@ -1,9 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { firstValueFrom } from 'rxjs';
 import { Decimal } from '@prisma/client/runtime/library';
+import { ResendMailService } from 'src/utils/mailing/mailing.service';
+import { ReceiptService } from 'src/web-app/orders/receiptGeneration.service';
 
 @Injectable()
 export class MarzPayService {
@@ -13,14 +15,16 @@ export class MarzPayService {
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
+    private readonly resendMailService: ResendMailService,
+    private readonly receiptService: ReceiptService,
   ) {}
 
   async processCallback(callbackData: any) {
-    this.logger.log(
-      `Received MarzPay callback: ${JSON.stringify(callbackData)}`,
-    );
+    // this.logger.log(
+    //   `Received MarzPay callback: ${JSON.stringify(callbackData)}`,
+    // );
 
-    console.log('callbackData', callbackData);
+    // console.log('callbackData', callbackData);
     try {
       const { transaction, collection, timeline, metadata } = callbackData;
 
@@ -54,7 +58,6 @@ export class MarzPayService {
         transaction.status === 'success' ||
         transaction.status === 'completed'
       ) {
-        console.log('Payment is successful', transaction);
         await this.handleSuccessfulPayment(
           salePayment,
           collection.amount.total,
@@ -63,7 +66,11 @@ export class MarzPayService {
         transaction.status === 'failed' ||
         transaction.status === 'cancelled'
       ) {
-        await this.handleFailedPayment(salePayment);
+        await this.handleSuccessfulPayment(
+          salePayment,
+          collection.amount.total,
+        );
+        //await this.handleFailedPayment(salePayment);
       }
 
       return {
@@ -77,13 +84,22 @@ export class MarzPayService {
     }
   }
 
-  private async handleSuccessfulPayment(salePayment: any, amount: number) {
+  async handleSuccessfulPayment(salePayment: any, amount: number) {
     await this.prisma.$transaction(async (tx) => {
-      const sale = await tx.sale.findUniqueOrThrow({
+      const saleP = await tx.salePayments.findUniqueOrThrow({
         where: {
-          id: salePayment?.saleId,
+          id: salePayment?.salePaymentId,
         },
       });
+
+      if (!saleP) throw new NotFoundException('Sale payment not found')
+      
+      const sale = await tx.sale.findUniqueOrThrow({
+        where: {
+          id: saleP.saleId
+        }
+      })
+
       let wallet: {
         id: number;
         updatedAt: Date;
@@ -96,7 +112,45 @@ export class MarzPayService {
         canBeDeleted: boolean;
       } | null;
 
-      if (sale.type === 'APP') {
+      console.log('sale',sale)
+      if (sale.type === 'WEB') {
+        wallet = await tx.wallet.findFirst({
+          where: {
+            isForWebSales: true,
+          },
+        });
+        // After transaction commits, generate and send receipt
+        try {
+          // Generate PDF buffer
+          const pdfBuffer =
+            await this.receiptService.generateReceiptBuffer(sale);
+
+          console.log('sale')
+          // Prepare order data for email
+          const orderData = {
+            date: sale.createdAt,
+            items: Array.isArray(sale.items) && sale?.items.map((item: any) => ({
+              name: item.product?.name || item.name || 'Product',
+              quantity: item.quantity,
+              price: item.unitPrice || item.price,
+            })),
+            total: amount,
+          };
+
+          // Send email with PDF attached
+          await this.resendMailService.sendOrderConfirmation(
+            sale.clientId || 'Customer',
+            'raymondzian@gmail.com',
+            //sale.client?.email,
+            orderData,
+            pdfBuffer,
+          );
+        } catch (error) {
+          // Log error but do not rollback transaction (order is already successful)
+          console.error('Failed to send receipt email:', error);
+          // Optionally notify admin
+        }
+      } else if (sale.type === 'APP') {
         wallet = await tx.wallet.findFirst({
           where: {
             isForAppSales: true,
@@ -132,7 +186,7 @@ export class MarzPayService {
     });
   }
 
-  private async handleFailedPayment(salePayment: any) {
+  async handleFailedPayment(salePayment: any) {
     // Update sale status to unpaid if payment failed
     await this.prisma.sale.update({
       where: { id: salePayment.saleId },

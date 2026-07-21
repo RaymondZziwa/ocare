@@ -133,7 +133,7 @@ export class SalesService {
         totalWithCharges,
         phoneNumber,
       );
-      console.log('Mobile money collection response:', response);
+
 
       // 4️⃣ Create sale record and payment records inside a transaction
       const sale = await this.prisma.$transaction(async (tx) => {
@@ -142,6 +142,7 @@ export class SalesService {
             clientId: String(customerId),
             servedBy,
             storeId,
+            type: 'WEB',
             status: finalSaleStatus,
             saleStatus: 'PENDING',
             total,
@@ -176,7 +177,7 @@ export class SalesService {
           ),
         );
 
-        console.log('sale payments:', salePayments);
+   
         const mobilePayments = salePayments.filter((payment) =>
           ['MTN_MOMO', 'AIRTEL_MOMO'].includes(payment.paymentMethod),
         );
