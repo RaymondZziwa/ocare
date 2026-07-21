@@ -159,6 +159,7 @@ enum TransactionType {
 enum SaleType {
   IN_SHOP
   APP
+  WEB
 }
 
 enum SUPPLIER_TYPE {
@@ -205,7 +206,7 @@ model Store {
   branchId            String
   deptId              String
   isForSales          Boolean    @default(false)
-  isForAppSales Boolean @default(false)
+  isForAppSales       Boolean    @default(false)
   branch              Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
   dept                Department @relation(fields: [deptId], references: [id], onDelete: Cascade)
   authorizedPersonnel Json? // Consider normalizing if frequently queried
@@ -392,7 +393,7 @@ model Item {
   brand           Brand         @relation(fields: [brandId], references: [id], onDelete: Cascade)
   barcodeType     String?
   alertStockLevel Float?
-  description     String?
+  description     String?       @db.Text
   showInPos       Boolean       @default(false)
   name            String
   buyingPrice     Decimal       @db.Decimal(10, 2)
@@ -401,18 +402,36 @@ model Item {
   unitId          String?
   unit            Unit?         @relation(fields: [unitId], references: [id], onDelete: Cascade)
   image           String?
+  sideEffects     Json?
+  variation       Json? // strengths of the medicine if any, e.g., 500mg, 250mg, etc.
   updatedAt       DateTime      @updatedAt
   createdAt       DateTime      @default(now())
 
   ProductInventory ProductInventory[]
   InventoryRecord  InventoryRecord[]
   Supply           Supply[]
+  ItemReview       ItemReview[]
 
   @@index([categoryId])
   @@index([name])
   @@index([barcode])
   @@index([createdAt])
   @@map("items")
+}
+
+model ItemReview {
+  id         String   @id @default(uuid())
+  itemId     String
+  item       Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  rating     Int
+  comment    String?
+  reviewerId String
+  client     Client   @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now())
+
+  @@index([itemId, createdAt])
+  @@map("item_reviews")
 }
 
 model Brand {
@@ -546,7 +565,7 @@ model SalePayments {
   referenceId                   String?
   notes                         String?
   cashierId                     String?
-  employee                      Employee?                    @relation(fields: [cashierId], references: [id], onDelete: Cascade)
+  employee                      Employee?                       @relation(fields: [cashierId], references: [id], onDelete: Cascade)
   updatedAt                     DateTime                        @updatedAt
   createdAt                     DateTime                        @default(now())
   SalePaymentTransactionHistory SalePaymentTransactionHistory[]
@@ -614,24 +633,27 @@ model SalePaymentTransactionHistory {
 
 // Clientele optimized
 model Client {
-  id           String    @id @default(uuid())
-  firstName    String
-  lastName     String
-  fullName     String
-  dob          DateTime?
-  gender       Gender?
-  phone        String?   @unique
-  email        String?   @unique
-  address      String?
-  profileImage String?
-  password     String?
-  pin          String?
-  updatedAt    DateTime  @updatedAt
-  createdAt    DateTime  @default(now())
+  id              String    @id @default(uuid())
+  firstName       String
+  lastName        String
+  fullName        String
+  dob             DateTime?
+  gender          Gender?
+  phone           String?   @unique
+  email           String?   @unique
+  address         String?
+  profileImage    String?
+  password        String?
+  pin             String?
+  isEmailVerified Boolean   @default(false)
+  isPhoneVerified Boolean   @default(false)
+  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime  @default(now())
 
   Sales              Sale[]
   ClientPrescription ClientPrescription[]
   ClientOtp          ClientOtp[]
+  ItemReview         ItemReview[]
 
   @@index([firstName, lastName])
   @@index([phone])
@@ -712,7 +734,7 @@ model Wallet {
   balance         Decimal           @default(0) @db.Decimal(10, 2)
   createdAt       DateTime          @default(now())
   isForSales      Boolean           @default(false)
-  isForAppSales Boolean @default(false)
+  isForAppSales   Boolean           @default(false)
   canBeDeleted    Boolean           @default(false)
   updatedAt       DateTime          @updatedAt
   Withdraw        Withdraw[]
@@ -788,17 +810,17 @@ model Payroll {
 }
 
 model ClientPrescription {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   clientId     String
-  client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client       Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
   images       Json
   notes        String?
-  prescribedBy String
-  employee     Employee @relation(fields: [prescribedBy], references: [id], onDelete: Cascade)
-  isReviewed   Boolean  @default(false)
+  prescribedBy String?
+  employee     Employee? @relation(fields: [prescribedBy], references: [id], onDelete: Cascade)
+  isReviewed   Boolean   @default(false)
   reviewNotes  String?
-  updatedAt    DateTime @updatedAt
-  createdAt    DateTime @default(now())
+  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime  @default(now())
 }
 
 model DeliveryNote {

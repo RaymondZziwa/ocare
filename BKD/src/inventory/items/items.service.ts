@@ -19,6 +19,8 @@ export class ItemService {
     image: string;
     description: string;
     showInPos: boolean;
+    variation?: any[];
+    sideEffects?: any[];
   }): Promise<GenericResponse> {
     // Generate barcode
     const barcode = generateEAN13();
@@ -31,6 +33,8 @@ export class ItemService {
         unitId: data.unitId,
         image: data.image,
         categoryId: data.categoryId ? data.categoryId : null,
+        variation: data.variation ? data.variation : [],
+        sideEffects: data.sideEffects ? data.sideEffects : [],
         barcode,
       },
     });
@@ -48,6 +52,7 @@ export class ItemService {
         category: true,
         unit: true,
         brand: true,
+        ItemReview: true,
       },
     });
     return {
@@ -116,6 +121,8 @@ export class ItemService {
       barcode?: string;
       barcodeType?: string;
       alertStockLevel?: number;
+      variation?: any[];
+      sideEffects?: any[];
     },
   ): Promise<GenericResponse> {
     const updateData: any = {};
@@ -136,7 +143,10 @@ export class ItemService {
       updateData.barcodeType = data.barcodeType;
     if (data.alertStockLevel !== undefined)
       updateData.alertStockLevel = data.alertStockLevel;
-
+    if (data.variation !== undefined)
+      updateData.variation = data.variation;
+    if (data.sideEffects !== undefined)
+      updateData.sideEffects = data.sideEffects;
     updateData.updatedAt = new Date();
 
     // Validate and add categoryId

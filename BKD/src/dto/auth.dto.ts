@@ -24,3 +24,12 @@ export class ResetPasswordDto {
   @IsString()
   code?: string;
 }
+
+export class AppUpdatePasswordDto {
+  @IsNotEmpty()
+  id!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  newPassword!: string;
+}

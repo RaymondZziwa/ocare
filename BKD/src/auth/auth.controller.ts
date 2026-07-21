@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
-import { AuthDto } from 'src/dto/auth.dto';
+import { AppUpdatePasswordDto, AuthDto } from 'src/dto/auth.dto';
 import { JwtAuthGuard } from 'src/guards/authGuard.guard';
 import { RefreshAuthGuard } from 'src/guards/refreshTokenGuard.guard';
 import { AppLoginDto, AppRegisterDto } from 'src/dto/appAuth.dto';
@@ -239,5 +239,10 @@ export class AuthController {
   @Get('mobile-profile/:id')
   async mobileProfile(@Param('id') id: string) {
     return this.authService.getAppUserProfile(id);
+  }
+
+  @Post('update-app-password')
+  async updateAppPassword(@Body() data: AppUpdatePasswordDto) {
+    return this.authService.updateAppUserPassword(data.id, data.newPassword);
   }
 }

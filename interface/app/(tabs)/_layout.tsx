@@ -1,3 +1,4 @@
+```tsx interface/app/(tabs)/_layout.tsx
 import { store } from '@/redux/store';
 import { Stack } from 'expo-router';
 import React from 'react';
@@ -13,7 +14,9 @@ export default function TabLayout() {
       <Stack.Screen name="wishlist" />
       <Stack.Screen name="store" />
       <Stack.Screen name="profile" />
+      <Stack.Screen name="notifications" />
     </Stack>
     </Provider>
   );
 }
+```

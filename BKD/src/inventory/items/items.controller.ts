@@ -33,6 +33,8 @@ export class ItemController {
       unitId: string;
       sellingPrice: number;
       showInPos: boolean;
+      variation?: any[];
+      sideEffects?: any[];
     },
   ) {
     return this.itemCategoryService.create(data);
@@ -71,6 +73,8 @@ export class ItemController {
       barcode?: string;
       barcodeType?: string;
       alertStockLevel?: number;
+      variation?: any[];
+      sideEffects?: any[];
     },
   ) {
     return this.itemCategoryService.update(id, data);

@@ -11,6 +11,7 @@ import { Toaster } from 'sonner-native';
 import { store } from '@/redux/store';
 import { Provider } from 'react-redux';
 import { AuthProvider } from '@/context/AuthContext';
+import { NotificationProvider } from '@/context/NotificationContext';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -22,6 +23,7 @@ export default function RootLayout() {
   return (
     <Provider store={store}>
       <AuthProvider>
+        <NotificationProvider>
         <GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaProvider>
       <Toaster
@@ -41,12 +43,14 @@ export default function RootLayout() {
         <Stack.Screen name="auth/password-reset" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="payment" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)/notifications" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
         </ThemeProvider>
         </PaperProvider>
       </SafeAreaProvider>
       </GestureHandlerRootView>
+        </NotificationProvider>
       </AuthProvider>
       </Provider>
   );

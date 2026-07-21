@@ -1,6 +1,12 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { DataState } from "../generic";
 
+export interface CartItemVariation {
+  id: string;
+  name: string;
+  value: string;
+}
+
 export interface CartItem {
   id: string;
   name: string;
@@ -9,6 +15,7 @@ export interface CartItem {
   image?: string;
   quantity: number;
   description?: string;
+  variation?: CartItemVariation;
 }
 
 const initialState: DataState<CartItem[]> = {
@@ -22,8 +29,12 @@ const cartSlice = createSlice({
   initialState,
   reducers: {
     addToCart(state, action: PayloadAction<Omit<CartItem, "quantity">>) {
-      const existingItem = state.data.find(item => item.id === action.payload.id);
-      
+      // Match by both id AND variation (if provided) so different variations are separate cart entries
+      const existingItem = state.data.find(item =>
+        item.id === action.payload.id &&
+        item.variation?.id === action.payload.variation?.id
+      );
+
       if (existingItem) {
         existingItem.quantity += 1;
       } else {

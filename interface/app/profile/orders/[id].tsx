@@ -6,10 +6,12 @@ import {
   Clock,
   CreditCard,
   Package,
+  RefreshCw,
+  ShoppingCart,
   Truck,
   XCircle,
 } from "lucide-react-native";
-import React, { useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import {
   Image,
   SafeAreaView,
@@ -19,8 +21,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { toast } from "sonner-native";
 import { baseURL } from "@/libs/apiConfig";
 import type { OrderItem, SaleStatus, PaymentStatus } from "@/services/profileService";
+import useCart from "@/hooks/useCart";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -64,6 +68,7 @@ const formatAmount = (amount: number) => `UGX ${amount}`;
 
 export default function OrderTrackingScreen() {
   const router = useRouter();
+  const { addItem } = useCart();
   const params = useLocalSearchParams<{
     orderId: string;
     saleStatus: SaleStatus;
@@ -117,6 +122,33 @@ export default function OrderTrackingScreen() {
 
   const isFailed = FAILED_STATUSES.includes(order.saleStatus);
   const payCfg = PAYMENT_CONFIG[order.paymentStatus] ?? PAYMENT_CONFIG.UNPAID;
+
+  const handleReorder = useCallback(() => {
+    let addedCount = 0;
+    order.items.forEach((item) => {
+      if (item.id && item.sellingPrice) {
+        addItem({
+          id: item.id,
+          name: item.name,
+          sellingPrice: item.sellingPrice,
+          image: item.image || null,
+          unitId: item.unitId || "",
+          description: item.variation
+            ? `${item.variation.name}: ${item.variation.value}`
+            : undefined,
+          variation: item.variation
+            ? { id: item.variation.id, name: item.variation.name, value: item.variation.value }
+            : undefined,
+        });
+        addedCount++;
+      }
+    });
+    if (addedCount > 0) {
+      toast.success(`${addedCount} item${addedCount !== 1 ? "s" : ""} added to your cart`);
+    } else {
+      toast.error("Could not reorder – items are missing details");
+    }
+  }, [order, addItem]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -241,6 +273,12 @@ export default function OrderTrackingScreen() {
                 </View>
               ))}
             </View>
+
+            {/* Reorder button */}
+            <TouchableOpacity style={styles.reorderButton} onPress={handleReorder} activeOpacity={0.7}>
+              <RefreshCw size={18} color="#ffffff" />
+              <Text style={styles.reorderButtonText}>Reorder All Items</Text>
+            </TouchableOpacity>
           </View>
 
           {/* ── Payment ───────────────────────────────────────────────────── */}
@@ -377,6 +415,28 @@ const styles = StyleSheet.create({
   itemName: { fontSize: 15, fontWeight: "600", color: "#1f2937" },
   itemMeta: { fontSize: 13, color: "#6b7280", marginTop: 2 },
   itemTotal: { fontSize: 15, fontWeight: "700", color: "#059669" },
+
+  // Reorder
+  reorderButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#059669",
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginTop: 16,
+    gap: 8,
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  reorderButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#ffffff",
+  },
 
   // Payment
   paymentCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16, borderWidth: 1, borderColor: "#e5e7eb" },

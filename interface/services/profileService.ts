@@ -25,7 +25,10 @@ export interface OrderItem {
   name: string;
   quantity: number;
   price: number;
+  sellingPrice: number;
   image: string | null;
+  unitId?: string;
+  variation?: { id: string; name: string; value: string } | null;
 }
 
 export interface Order {
@@ -80,6 +83,7 @@ const PROFILE_ENDPOINTS = {
   UPLOAD_AVATAR: "/api/profile/avatar",
   GET_USER_ORDERS: "/api/orders/user-orders",
   GET_ORDER_BY_ID: "/api/orders",
+  REORDER: "/api/orders/reorder",
 };
 
 /**

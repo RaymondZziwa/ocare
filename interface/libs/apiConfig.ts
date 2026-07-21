@@ -1,10 +1,10 @@
 import axios, { type AxiosRequestConfig, type AxiosResponse } from "axios";
 import { toast } from "sonner-native";
 
-export const baseURL = "http://localhost:3500";
-export const imageURL = "http://localhost:3500";
-// export const baseURL = "https://pbmsapi.megaerpug.com"
-//export const imageURL = "https://pbmsapi.megaerpug.com/storage"
+// export const baseURL = "http://localhost:3500";
+// export const imageURL = "http://localhost:3500";
+export const baseURL = "https://api.ocare.megaerpug.com"
+export const imageURL = "https://api.ocare.megaerpug.com/storage"
 export const legacyBaseURL = "https://pbmslegacyapi.megaerpug.com";
 export const system = "PBMS";
 

@@ -6,11 +6,13 @@ import {
   Clock,
   CreditCard,
   Package,
+  RefreshCw,
   Search,
   ShoppingBag,
+  ShoppingCart,
   Truck,
 } from "lucide-react-native";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -26,6 +28,7 @@ import { toast } from "sonner-native";
 import { baseURL } from "@/libs/apiConfig";
 import { useAuth } from "@/context/AuthContext";
 import { getOrders, type Order } from "@/services/profileService";
+import useCart from "@/hooks/useCart";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -85,6 +88,7 @@ const formatDate = (iso: string) => {
 export default function OrderHistoryScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { addItem } = useCart();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -110,6 +114,39 @@ export default function OrderHistoryScreen() {
     loadOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleReorder = useCallback((order: Order) => {
+    let addedCount = 0;
+
+    order.items.forEach((item) => {
+      if (item.id && item.sellingPrice) {
+        addItem({
+          id: item.id,
+          name: item.name,
+          sellingPrice: item.sellingPrice,
+          image: item.image || null,
+          unitId: item.unitId || "",
+          description: item.variation
+            ? `${item.variation.name}: ${item.variation.value}`
+            : undefined,
+          variation: item.variation
+            ? {
+                id: item.variation.id,
+                name: item.variation.name,
+                value: item.variation.value,
+              }
+            : undefined,
+        });
+        addedCount++;
+      }
+    });
+
+    if (addedCount > 0) {
+      toast.success(`${addedCount} item${addedCount !== 1 ? "s" : ""} added to your cart`);
+    } else {
+      toast.error("Could not reorder – items are missing details");
+    }
+  }, [addItem]);
 
   // Filter & sort: pending/active orders first
   const displayedOrders = useMemo(() => {
@@ -228,7 +265,7 @@ export default function OrderHistoryScreen() {
             </View>
           ) : (
             displayedOrders.map((order) => (
-              <OrderCard key={order.id} order={order} onPress={() => handleOrderPress(order)} />
+              <OrderCard key={order.id} order={order} onPress={() => handleOrderPress(order)} onReorder={handleReorder} />
             ))
           )}
         </ScrollView>
@@ -239,7 +276,7 @@ export default function OrderHistoryScreen() {
 
 // ─── Order Card ───────────────────────────────────────────────────────────────
 
-function OrderCard({ order, onPress }: { order: Order; onPress: () => void }) {
+function OrderCard({ order, onPress, onReorder }: { order: Order; onPress: () => void; onReorder: (order: Order) => void }) {
   const statusCfg = STATUS_CONFIG[order.saleStatus] ?? STATUS_CONFIG.CANCELLED;
   const payCfg = PAYMENT_CONFIG[order.paymentStatus] ?? PAYMENT_CONFIG.UNPAID;
   const StatusIcon = statusCfg.icon;
@@ -298,6 +335,19 @@ function OrderCard({ order, onPress }: { order: Order; onPress: () => void }) {
           <Text style={styles.cardTotalValue}>{formatAmount(order.total)}</Text>
         </View>
       </View>
+
+      {/* Reorder button */}
+      <TouchableOpacity
+        style={styles.reorderButton}
+        onPress={(e) => {
+          e.stopPropagation();
+          onReorder(order);
+        }}
+        activeOpacity={0.7}
+      >
+        <RefreshCw size={14} color="#059669" />
+        <Text style={styles.reorderButtonText}>Reorder</Text>
+      </TouchableOpacity>
 
       {/* Chevron hint */}
       <ChevronRight size={16} color="#d1d5db" style={styles.cardChevron} />
@@ -441,4 +491,21 @@ const styles = StyleSheet.create({
   cardTotalWrap: { marginLeft: "auto", alignItems: "flex-end" },
   cardTotalLabel: { fontSize: 11, color: "#9ca3af" },
   cardTotalValue: { fontSize: 15, fontWeight: "800", color: "#059669" },
+
+  // Reorder button
+  reorderButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#ecfdf5",
+    borderRadius: 8,
+    paddingVertical: 8,
+    marginTop: 10,
+    gap: 6,
+  },
+  reorderButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#059669",
+  },
 });

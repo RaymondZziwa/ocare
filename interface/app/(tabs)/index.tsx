@@ -3,10 +3,11 @@ import useItems from "@/hooks/useItems";
 import useBanners from "@/hooks/useBanners";
 import { baseURL } from "@/libs/apiConfig";
 import { useRouter } from "expo-router";
-import { Heart, Plus, Search, ShoppingCart } from "lucide-react-native";
-import React, { useState } from "react";
+import { Heart, Plus, RefreshCw, Search, ShoppingCart, Bell } from "lucide-react-native";
+import React, { useCallback, useState } from "react";
 import {
   Image,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -37,13 +38,20 @@ const getFullImageUrl = (imageUrl: string | null | undefined) => {
 
 export default function StoreScreen() {
   const router = useRouter();
-  const { data: categories } = useItemCategories();
-  const { data: medicines } = useItems();
+  const { data: categories, refresh: refreshCategories } = useItemCategories();
+  const { data: medicines, refresh: refreshItems } = useItems();
   //const { data: banners } = useBanners();
   const { addItem, count: cartCount } = useCart(); // Use the useCart hook
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [wishlistCount, setWishlistCount] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await Promise.allSettled([refreshCategories(), refreshItems()]);
+    setIsRefreshing(false);
+  }, [refreshCategories, refreshItems]);
 
   const handleAddToCart = (medicine: any) => {
     console.log("Adding to cart:", medicine);
@@ -65,6 +73,10 @@ export default function StoreScreen() {
 
   const handleCart = () => {
     router.push("/(tabs)/cart" as any);
+  };
+
+  const handleNotifications = () => {
+    router.push("/(tabs)/notifications" as any);
   };
 
   const handleWishlist = () => {
@@ -176,6 +188,18 @@ export default function StoreScreen() {
             </View>
 
             <View style={styles.headerIcons}>
+              {/* <TouchableOpacity
+                style={styles.iconButton}
+                onPress={onRefresh}
+              >
+                <RefreshCw size={20} color={isRefreshing ? "#1da250" : "#1f2937"} />
+              </TouchableOpacity> */}
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={handleNotifications}
+              >
+                <Bell size={20} color="#1f2937" />
+              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.iconButton}
                 onPress={handleWishlist}
@@ -282,7 +306,20 @@ export default function StoreScreen() {
           </ScrollView>
         </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={onRefresh}
+              tintColor="#1da250"
+              colors={["#1da250"]}
+              title="Pull to refresh"
+              titleColor="#6b7280"
+            />
+          }
+        >
           {popularItems.length > 0 && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>

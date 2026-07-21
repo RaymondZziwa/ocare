@@ -15,6 +15,7 @@ import { ReportsModule } from './reports/reports.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { FinanceModule } from './finance/finance.module';
 import { AppOrdersModule } from './sales/orders/orders.module';
+import { WebAppModule } from './web-app/webApp.module';
 @Module({
   imports: [
     ServeStaticModule.forRoot({
@@ -39,6 +40,7 @@ import { AppOrdersModule } from './sales/orders/orders.module';
     ReportsModule,
     FinanceModule,
     AppOrdersModule,
+    WebAppModule,
   ],
 })
 export class AppModule {}
