@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Welcome to Ocare Pharmacy</title>
+</head>
+
+<body
+    style="margin:0; padding:0; background-color:#f4f6f9; color:#333; font-family: 'Segoe UI', Arial, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+    <div
+        style="max-width:600px; margin:40px auto; background-color:#ffffff; padding:30px; border-radius:10px; box-shadow:0 4px 15px rgba(0,0,0,0.1);">
+
+        <!-- Header -->
+        <div style="text-align:center; padding-bottom:20px; border-bottom:2px solid #e6e9ef;">
+            <h1 style="margin:0; font-size:26px; font-weight:700; color:#1ca24e;">
+                Welcome to Ocare Pharmacy
+            </h1>
+            <p style="margin:4px 0 0; color:#777; font-size:14px;">Your trusted online pharmacy</p>
+        </div>
+
+        <!-- Body -->
+        <div style="font-size:16px; line-height:1.6; color:#333; padding-top:20px;">
+            <p>Hi <strong>{{firstName}}</strong>,</p>
+            <p>Thank you for registering with <strong>Ocare Pharmacy</strong> – your convenient, secure, and reliable
+                online pharmacy for all your health and wellness needs.</p>
+
+            <p>To complete your registration, please verify your email address by clicking the button below:</p>
+
+            <div style="margin:20px 0; text-align:center;">
+                <a href="{{verificationLink}}"
+                    style="display:inline-block; background:#1ca24e; color:#ffffff; padding:14px 32px; border-radius:6px; cursor:pointer; text-decoration:none; font-weight:bold; font-size:16px;">
+                    Verify Email Address
+                </a>
+            </div>
+
+            <p>This verification link will expire in <strong>24 hours</strong>.</p>
+
+            <p>If the button above doesn’t work, copy and paste the following link into your browser:</p>
+            <p
+                style="word-break:break-all; font-size:13px; color:#555; background:#f4f6f9; padding:10px; border-radius:4px;">
+                {{verificationLink}}
+            </p>
+
+            <p>If you did not create an account with Ocare Pharmacy, please ignore this email or contact our support
+                team at
+                <a href="mailto:support@ocareug.com"
+                    style="color:#1ca24e; text-decoration:none;">support@ocareug.com</a>.
+            </p>
+
+            <p style="margin-top:24px;">Once verified, you’ll be able to:</p>
+            <ul style="padding-left:20px; color:#555;">
+                <li>Browse and order medications with ease</li>
+                <li>Track your prescriptions and orders</li>
+                <li>Access exclusive offers and health tips</li>
+            </ul>
+
+            <p>We’re here to make your healthcare experience seamless. Start exploring today!</p>
+
+            <p>Warm regards,<br /><strong>The Ocare Pharmacy Team</strong></p>
+        </div>
+
+        <!-- Footer -->
+        <div
+            style="margin-top:40px; font-size:12px; color:#777; text-align:center; border-top:1px solid #e6e9ef; padding-top:20px;">
+            &copy; {{year}} Ocare Pharmacy · All rights reserved<br />
+            <a href="https://ocareug.com" style="color:#1ca24e; text-decoration:none;">www.ocareug.com</a>
+        </div>
+    </div>
+</body>
+
+</html>

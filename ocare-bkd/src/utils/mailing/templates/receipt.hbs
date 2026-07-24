@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Order Confirmation – Ocare Pharmacy</title>
+</head>
+
+<body
+    style="margin:0; padding:0; background-color:#f4f6f9; color:#333; font-family: 'Segoe UI', Arial, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+    <div
+        style="max-width:600px; margin:40px auto; background-color:#ffffff; padding:30px; border-radius:10px; box-shadow:0 4px 15px rgba(0,0,0,0.1);">
+
+        <!-- Header -->
+        <div style="text-align:center; padding-bottom:20px; border-bottom:2px solid #e6e9ef;">
+            <h1 style="margin:0; font-size:26px; font-weight:700; color:#1ca24e;">
+                Ocare Pharmacy
+            </h1>
+            <p style="margin:4px 0 0; color:#777; font-size:14px;">Order Confirmation</p>
+        </div>
+
+        <!-- Body -->
+        <div style="font-size:16px; line-height:1.6; color:#333; padding-top:20px;">
+            <p>Hi <strong>{{firstName}}</strong>,</p>
+
+            <p>Thank you for your order! We are pleased to confirm that your order <strong>#{{orderNumber}}</strong> has
+                been placed successfully and is now being processed.</p>
+
+            <p><strong>Order Date:</strong> {{orderDate}}</p>
+
+            <!-- Order Summary Table -->
+            <table style="width:100%; border-collapse:collapse; margin:16px 0;">
+                <thead>
+                    <tr style="background-color:#f4f6f9;">
+                        <th style="padding:10px; text-align:left; border-bottom:2px solid #e6e9ef;">Item</th>
+                        <th style="padding:10px; text-align:center; border-bottom:2px solid #e6e9ef;">Qty</th>
+                        <th style="padding:10px; text-align:right; border-bottom:2px solid #e6e9ef;">Price</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each orderItems}}
+                    <tr>
+                        <td style="padding:8px 10px; border-bottom:1px solid #e6e9ef;">{{this.name}}</td>
+                        <td style="padding:8px 10px; text-align:center; border-bottom:1px solid #e6e9ef;">
+                            {{this.quantity}}</td>
+                        <td style="padding:8px 10px; text-align:right; border-bottom:1px solid #e6e9ef;">{{this.price}}
+                        </td>
+                    </tr>
+                    {{/each}}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2" style="padding:10px; text-align:right; font-weight:bold;">Total:</td>
+                        <td style="padding:10px; text-align:right; font-weight:bold; color:#1ca24e;">{{totalAmount}}
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+
+            <p>A PDF receipt with the full details of your order is attached to this email for your records.</p>
+
+            <p>You can also view your order history and track the delivery status by logging into your account at
+                <a href="https://ocareug.com/account"
+                    style="color:#1ca24e; text-decoration:none;">ocareug.com/account</a>.
+            </p>
+
+            <p>If you have any questions about your order, please don't hesitate to contact our support team at
+                <a href="mailto:support@ocareug.com"
+                    style="color:#1ca24e; text-decoration:none;">support@ocareug.com</a>.
+            </p>
+
+            <p>We appreciate your trust in Ocare Pharmacy. We hope you enjoy your purchase!</p>
+
+            <p>Warm regards,<br /><strong>The Ocare Pharmacy Team</strong></p>
+        </div>
+
+        <!-- Footer -->
+        <div
+            style="margin-top:40px; font-size:12px; color:#777; text-align:center; border-top:1px solid #e6e9ef; padding-top:20px;">
+            &copy; {{year}} Ocare Pharmacy · All rights reserved<br />
+            <a href="https://ocareug.com" style="color:#1ca24e; text-decoration:none;">www.ocareug.com</a>
+        </div>
+    </div>
+</body>
+
+</html>

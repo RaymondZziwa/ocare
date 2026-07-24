@@ -1,0 +1,138 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+  moduleFormat    = "cjs"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum SaleType {
+  In_Shop
+  App
+  Web
+}
+
+enum Gender {
+  Male
+  Female
+  Unknown
+}
+
+enum AuthProvider {
+  Web
+  Google
+  Mobile
+  In_Shop
+}
+
+
+model Unit {
+  id        String   @id @default(uuid())
+  name      String
+  value     Float?
+  abr       String?
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  Item             Item[]
+
+  @@unique([name])
+  @@map("units")
+}
+
+
+model Brand {
+  id        String   @id @default(uuid())
+  name      String
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  Item      Item[]
+}
+
+model ItemCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  code        String?
+  description String?
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  Item Item[]
+
+  @@map("item_categories")
+}
+
+model Item {
+  id              String        @id @default(uuid())
+  categoryId      String
+  category        ItemCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  brandId         String
+  brand           Brand         @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  barcodeType     String?
+  alertStockLevel Float
+  description     String      @db.Text
+  showInPos       Boolean       @default(false)
+  name            String
+  buyingPrice     Decimal       @db.Decimal(10, 2)
+  sellingPrice    Decimal       @db.Decimal(10, 2)
+  barcode         String?
+  unitId          String
+  unit            Unit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  image           String
+  sideEffects     Json?
+  variation       Json? // strengths of the medicine if any, e.g., 500mg, 250mg, etc.
+  updatedAt       DateTime      @updatedAt
+  createdAt       DateTime      @default(now())
+
+  @@index([categoryId])
+  @@index([name])
+  @@index([barcode])
+  @@index([createdAt])
+  @@map("items")
+}
+
+model Client {
+  id              String    @id @default(uuid())
+  provider        AuthProvider
+  firstName       String
+  lastName        String
+  fullName        String
+  gender          Gender?
+  phone           String? 
+  email           String  @unique
+  address         String?
+  password        String
+  isEmailVerified Boolean   @default(false)
+  isPhoneVerified Boolean   @default(false)
+  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime  @default(now())
+  addresses Address[]
+  // Sales              Sale[]
+  // ClientPrescription ClientPrescription[]
+  // ClientOtp          ClientOtp[]
+  // ItemReview         ItemReview[]
+
+  @@index([firstName, lastName])
+  @@index([phone])
+  @@index([createdAt])
+  @@map("clients")
+}
+
+model Address {
+  id              String    @id @default(uuid())
+  clientId String
+  client          Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  label String?
+  town String
+  village String
+  landmark String?
+  isDefault Boolean @default(false)
+  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime  @default(now())
+}

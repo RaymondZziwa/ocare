@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Order Status Update – Ocare Pharmacy</title>
+</head>
+
+<body
+    style="margin:0; padding:0; background-color:#f4f6f9; color:#333; font-family: 'Segoe UI', Arial, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+    <div
+        style="max-width:600px; margin:40px auto; background-color:#ffffff; padding:30px; border-radius:10px; box-shadow:0 4px 15px rgba(0,0,0,0.1);">
+
+        <!-- Header -->
+        <div style="text-align:center; padding-bottom:20px; border-bottom:2px solid #e6e9ef;">
+            <h1 style="margin:0; font-size:26px; font-weight:700; color:#1ca24e;">
+                Ocare Pharmacy
+            </h1>
+            <p style="margin:4px 0 0; color:#777; font-size:14px;">Order Status Update</p>
+        </div>
+
+        <!-- Body -->
+        <div style="font-size:16px; line-height:1.6; color:#333; padding-top:20px;">
+            <p>Hi <strong>{{firstName}}</strong>,</p>
+
+            <p>We wanted to let you know that the status of your order <strong>#{{orderNumber}}</strong> has been
+                updated.</p>
+
+            <!-- Status Card -->
+            <div
+                style="background:#f4f6f9; border-left:4px solid #1ca24e; padding:12px 16px; margin:16px 0; border-radius:4px;">
+                <p style="margin:0; font-weight:600;">New Status:</p>
+                <p style="margin:4px 0 0; font-size:18px; color:#1ca24e; font-weight:bold;">
+                    {{newStatus}}
+                </p>
+                <p style="margin:8px 0 0; font-size:14px; color:#777;">
+                    Updated on: {{statusUpdateDate}}
+                </p>
+            </div>
+
+            <p>Here’s what this status means for you:</p>
+            <ul style="padding-left:20px; color:#555;">
+                {{statusDescription}}
+            </ul>
+
+            <p>You can track your order anytime by visiting your account dashboard:</p>
+            <div style="margin:16px 0; text-align:center;">
+                <a href="{{trackingLink}}"
+                    style="display:inline-block; background:#1ca24e; color:#ffffff; padding:12px 28px; border-radius:6px; text-decoration:none; font-weight:bold;">
+                    Track My Order
+                </a>
+            </div>
+
+            <p>If you have any questions regarding your order, please reach out to our support team at
+                <a href="mailto:support@ocareug.com"
+                    style="color:#1ca24e; text-decoration:none;">support@ocareug.com</a>.
+            </p>
+
+            <p>Thank you for choosing Ocare Pharmacy – we’re committed to delivering your health essentials with care.
+            </p>
+
+            <p>Warm regards,<br /><strong>The Ocare Pharmacy Team</strong></p>
+        </div>
+
+        <!-- Footer -->
+        <div
+            style="margin-top:40px; font-size:12px; color:#777; text-align:center; border-top:1px solid #e6e9ef; padding-top:20px;">
+            &copy; {{year}} Ocare Pharmacy · All rights reserved<br />
+            <a href="https://ocareug.com" style="color:#1ca24e; text-decoration:none;">www.ocareug.com</a>
+        </div>
+    </div>
+</body>
+
+</html>
