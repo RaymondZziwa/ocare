@@ -8,7 +8,7 @@ async function bootstrap() {
     origin: [
       'http://localhost:5173',
       'http://localhost:5170',
-      'http://localhost:8080',
+      'https://ocare-web.netlify.app',
       'https://ocareportal.netlify.app',
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
