@@ -114,36 +114,36 @@ export class ResendMailService {
   }
 
   // Optional: send order confirmation with PDF attachment
-  // async sendOrderConfirmation(
-  //   name: string,
-  //   email: string,
-  //   orderData: any,
-  //   pdfBuffer: Buffer,
-  // ) {
-  //   try {
-  //     const html = await this.loadTemplate('receipt', {
-  //       firstName: name,
-  //       orderDate: orderData.date,
-  //       orderItems: orderData.items,
-  //       totalAmount: orderData.total,
-  //       year: this.year,
-  //     });
-  //     await this.resend.emails.send({
-  //       from: 'sales@ocareug.com',
-  //       to: email,
-  //       subject: `Your Ocare Order Confirmation`,
-  //       html,
-  //       attachments: [
-  //         {
-  //           filename: `receipt-${name}.pdf`,
-  //           content: pdfBuffer,
-  //           contentType: 'application/pdf',
-  //         },
-  //       ],
-  //     });
-  //   } catch (error) {
-  //     console.error('Error sending order confirmation:', error);
-  //     throw new Error('Failed to send order confirmation');
-  //   }
-  // }
+  async sendOrderConfirmation(
+    name: string,
+    email: string,
+    orderData: any,
+    pdfBuffer: Buffer,
+  ) {
+    try {
+      const html = await this.loadTemplate('receipt', {
+        firstName: name,
+        orderDate: orderData.date,
+        orderItems: orderData.items,
+        totalAmount: orderData.total,
+        year: this.year,
+      });
+      await this.resend.emails.send({
+        from: 'sales@ocareug.com',
+        to: email,
+        subject: `Your Ocare Order Confirmation`,
+        html,
+        attachments: [
+          {
+            filename: `receipt-${name}.pdf`,
+            content: pdfBuffer,
+            contentType: 'application/pdf',
+          },
+        ],
+      });
+    } catch (error) {
+      console.error('Error sending order confirmation:', error);
+      throw new Error('Failed to send order confirmation');
+    }
+  }
 }

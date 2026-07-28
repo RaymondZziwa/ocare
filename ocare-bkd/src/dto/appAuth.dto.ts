@@ -9,11 +9,11 @@ export class AppPwdResetDto {
 }
 
 export class AppSendOtpDto {
-  phone!: string;
+  email!: string;
 }
 
 export class AppVerifyOtpDto {
-  phone!: string;
+  email!: string;
   otp!: string;
 }
 

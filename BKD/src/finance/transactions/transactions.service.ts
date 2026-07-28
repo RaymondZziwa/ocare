@@ -66,10 +66,6 @@ export class TransactionService {
           qty: inventory.qty - saleItem.quantity,
         },
       });
-
-      // this.logger.log(
-      //   `Stock deducted for ${saleItem.name}: ${inventory.qty} -> ${inventory.qty - saleItem.quantity}`,
-      // );
     }
   }
 

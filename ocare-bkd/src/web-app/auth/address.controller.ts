@@ -8,6 +8,7 @@ import {
   Request,
   HttpStatus,
   HttpCode,
+  Get,
 } from '@nestjs/common';
 import { WebProfileService } from '../profile/webProfile.service';
 import { CreateAddressDto } from '../dto/WebAuth.dto';
@@ -19,7 +20,7 @@ export class AddressController {
   /**
    * Save a new address for the authenticated user
    */
-  @Post()
+  @Post('create')
   @HttpCode(HttpStatus.CREATED)
   async saveAddress(@Request() req, @Body() dto: CreateAddressDto) {
     return this.addressService.saveAddress({
@@ -47,5 +48,11 @@ export class AddressController {
   @HttpCode(HttpStatus.OK)
   async deleteAddress(@Param('id') id: string) {
     return this.addressService.deleteAddress(id);
+  }
+
+  @Get(':id')
+  @HttpCode(HttpStatus.OK)
+  async getAddress(@Param('id') id: string) {
+    return this.addressService.getAddresses(id);
   }
 }

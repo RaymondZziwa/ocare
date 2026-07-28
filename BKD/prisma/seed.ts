@@ -6,7 +6,13 @@ import { defaultUser } from './seed/super_user';
 import { defaultCompany } from './seed/defaultCompany';
 import { unitsOfMeasurement } from './seed/unitsOfMeasurement';
 
-const prisma = new PrismaClient();
+const adapter = new PrismaMysql({
+  url: process.env.DATABASE_URL!,
+});
+
+const prisma = new PrismaClient({
+  adapter,
+});
 
 // Seed Branches
 async function seedUnits() {

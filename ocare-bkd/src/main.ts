@@ -1,8 +1,12 @@
 import { NestFactory } from '@nestjs/core';
+import cookieParser from 'cookie-parser';
+
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  app.use(cookieParser());
 
   app.enableCors({
     origin: [
@@ -16,6 +20,6 @@ async function bootstrap() {
     allowedHeaders: 'Content-Type, Authorization, X-Requested-With',
   });
 
-  await app.listen(process.env.PORT ?? 3500);
+  await app.listen(process.env.PORT ?? 3800);
 }
 bootstrap();

@@ -1,179 +1,176 @@
-// import {
-//   IsString,
-//   IsNotEmpty,
-//   IsNumber,
-//   IsArray,
-//   IsOptional,
-//   IsEnum,
-//   ValidateNested,
-//   Min,
-// } from 'class-validator';
-// import { Type } from 'class-transformer';
-// import { PartialType } from '@nestjs/mapped-types';
-// import { PaymentMethodType } from '@prisma/client';
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  IsArray,
+  IsOptional,
+  IsEnum,
+  ValidateNested,
+  Min,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+import { PartialType } from '@nestjs/mapped-types';
 
-// export enum PaymentStatus {
-//   FULLY_PAID = 'FULLY_PAID',
-//   PARTIALLY_PAID = 'PARTIALLY_PAID',
-//   UNPAID = 'UNPAID',
-// }
+export enum PaymentStatus {
+  FULLY_PAID = 'FULLY_PAID',
+  PARTIALLY_PAID = 'PARTIALLY_PAID',
+  UNPAID = 'UNPAID',
+}
 
-// export class PaymentMethodDto {
-//   @IsString()
-//   @IsNotEmpty()
-//   type: string;
+export class PaymentMethodDto {
+  @IsString()
+  @IsNotEmpty()
+  type: string;
 
-//   @IsNumber()
-//   @Min(0)
-//   amount: number;
-// }
+  @IsNumber()
+  @Min(0)
+  amount: number;
+}
 
-// export class ItemCategoryDto {
-//   @IsNotEmpty()
-//   id: string;
+export class ItemCategoryDto {
+  @IsNotEmpty()
+  id: string;
 
-//   @IsString()
-//   name: string;
-// }
+  @IsString()
+  name: string;
+}
 
-// export class SaleItemDto {
-//   @IsNotEmpty()
-//   id: string;
+export class SaleItemDto {
+  @IsNotEmpty()
+  id: string;
 
-//   @IsNotEmpty()
-//   categoryId: string;
+  @IsNotEmpty()
+  categoryId: string;
 
-//   @IsString()
-//   name: string;
+  @IsString()
+  name: string;
 
-//   @IsString()
-//   price: string; // if numeric in DB, change to @IsNumber()
+  @IsString()
+  price: string; // if numeric in DB, change to @IsNumber()
 
-//   @IsString()
-//   barcode: string;
+  @IsString()
+  barcode: string;
 
-//   @ValidateNested()
-//   @Type(() => ItemCategoryDto)
-//   category: ItemCategoryDto;
+  @ValidateNested()
+  @Type(() => ItemCategoryDto)
+  category: ItemCategoryDto;
 
-//   @IsNumber()
-//   quantity: number;
+  @IsNumber()
+  quantity: number;
 
-//   @IsNumber()
-//   discount: number;
+  @IsNumber()
+  discount: number;
 
-//   @IsNumber()
-//   total: number;
-// }
+  @IsNumber()
+  total: number;
+}
 
-// export class CreateSaleDto {
-//   @IsEnum(PaymentStatus)
-//   status: PaymentStatus;
+export class CreateSaleDto {
+  @IsEnum(PaymentStatus)
+  status: PaymentStatus;
 
-//   @IsArray()
-//   @ValidateNested({ each: true })
-//   paymentMethods: { type: PaymentMethodType; amount: number }[];
+  source!: 'Web' | 'Mobile' | 'In_shop';
 
-//   @IsOptional()
-//   @IsString()
-//   notes?: string;
+  @IsString()
+  paymentMethod: string;
 
-//   @IsNumber()
-//   total: number;
+  @IsOptional()
+  @IsString()
+  notes?: string;
 
-//   @IsNumber()
-//   balance: number;
+  @IsNumber()
+  total: number;
 
-//   @IsOptional()
-//   @IsNumber()
-//   totalWithCharges?: number;
+  @IsNumber()
+  balance: number;
 
-//   @IsArray()
-//   @ValidateNested({ each: true })
-//   items: {
-//     id: string;
-//     categoryId: string;
-//     name: string;
-//     price: string;
-//     barcode: string;
-//     category: any;
-//     quantity: number;
-//     discount: number;
-//     total: number;
-//     unitId: string;
-//   }[];
+  @IsNumber()
+  totalWithDelivery: number;
 
-//   @IsNotEmpty()
-//   storeId: string;
+  @IsArray()
+  @ValidateNested({ each: true })
+  items: {
+    id: string;
+    categoryId: string;
+    name: string;
+    price: string;
+    barcode: string;
+    category: any;
+    quantity: number;
+    discount: number;
+    total: number;
+    unitId: string;
+  }[];
 
-//   @IsNotEmpty()
-//   customerId: string;
+  @IsNotEmpty()
+  storeId: string;
 
-//   @IsNotEmpty()
-//   servedBy: string;
+  @IsNotEmpty()
+  customerId: string;
 
-//   @IsString()
-//   @IsOptional()
-//   phoneNumber: string;
-// }
+  @IsNotEmpty()
+  servedBy: string;
 
-// export class ExhibitionCreateSaleDto {
-//   @IsEnum(PaymentStatus)
-//   status: PaymentStatus;
+  @IsString()
+  @IsOptional()
+  phoneNumber: string;
+}
 
-//   @IsArray()
-//   @ValidateNested({ each: true })
-//   paymentMethods: [];
+export class ExhibitionCreateSaleDto {
+  @IsEnum(PaymentStatus)
+  status: PaymentStatus;
 
-//   @IsOptional()
-//   @IsString()
-//   notes?: string;
+  @IsArray()
+  @ValidateNested({ each: true })
+  paymentMethods: [];
 
-//   @IsNumber()
-//   total: number;
+  @IsOptional()
+  @IsString()
+  notes?: string;
 
-//   @IsNumber()
-//   balance: number;
+  @IsNumber()
+  total: number;
 
-//   @IsArray()
-//   @ValidateNested({ each: true })
-//   items: any[];
+  @IsNumber()
+  balance: number;
 
-//   @IsString()
-//   @IsNotEmpty()
-//   storeId: number;
+  @IsArray()
+  @ValidateNested({ each: true })
+  items: any[];
 
-//   @IsString()
-//   @IsNotEmpty()
-//   customerId: number;
+  @IsString()
+  @IsNotEmpty()
+  storeId: number;
 
-//   @IsNotEmpty()
-//   servedBy: string;
-// }
+  @IsString()
+  @IsNotEmpty()
+  customerId: number;
 
-// export class CollectCreditPaymentDto {
-//   @IsNumber()
-//   @IsNotEmpty()
-//   saleId: string;
+  @IsNotEmpty()
+  servedBy: string;
+}
 
-//   @IsArray()
-//   @ValidateNested({ each: true })
-//   paymentMethods: { type: PaymentMethodType; amount: number }[];
+export class CollectCreditPaymentDto {
+  @IsNumber()
+  @IsNotEmpty()
+  saleId: string;
 
-//   @IsNotEmpty()
-//   servedBy: string;
-//   referenceId?: number;
+  paymentMethods: string;
 
-//   @IsOptional()
-//   @IsString()
-//   notes?: string;
+  @IsNotEmpty()
+  servedBy: string;
+  referenceId?: number;
 
-//   @IsNumber()
-//   amountPaid: number;
+  @IsOptional()
+  @IsString()
+  notes?: string;
 
-//   @IsNumber()
-//   newBalance: number;
-// }
-// export class UpdateExhibitionSaleDto extends PartialType(CreateSaleDto) {}
+  @IsNumber()
+  amountPaid: number;
 
-// export class UpdateSaleDto extends PartialType(CreateSaleDto) {}
+  @IsNumber()
+  newBalance: number;
+}
+export class UpdateExhibitionSaleDto extends PartialType(CreateSaleDto) {}
+
+export class UpdateSaleDto extends PartialType(CreateSaleDto) {}

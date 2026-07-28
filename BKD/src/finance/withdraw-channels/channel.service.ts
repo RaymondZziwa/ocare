@@ -199,8 +199,7 @@ export class ChannelService {
     };
   }
 
-  //validate bank account details
-  //validate bank account details
+
   //validate bank account details
   async validateBankAccountDetails(id: string): Promise<GenericResponse> {
     try {

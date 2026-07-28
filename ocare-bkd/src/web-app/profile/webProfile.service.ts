@@ -152,7 +152,7 @@ export class WebProfileService {
     village: string;
     landMark: string;
   }) {
-    await this.prisma.address.create({
+    const newAdd = await this.prisma.address.create({
       data: {
         label: dto.label,
         town: dto.town,
@@ -164,6 +164,7 @@ export class WebProfileService {
       },
     });
     return {
+      data: newAdd,
       message: 'Address saved successfully',
     };
   }
@@ -208,6 +209,27 @@ export class WebProfileService {
 
     return {
       message: 'Address deleted successfully',
+    };
+  }
+
+  async getAddresses(userId: string) {
+    const add = await this.prisma.client.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (!add) throw new NotFoundException('User not found');
+
+    const addresses = await this.prisma.address.findMany({
+      where: {
+        clientId: userId,
+      },
+    });
+
+    return {
+      data: addresses,
+      message: 'Address fetched successfully',
     };
   }
 }

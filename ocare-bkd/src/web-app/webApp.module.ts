@@ -8,9 +8,10 @@ import { ResendMailService } from 'src/utils/mailing/mailing.service';
 import { VerificationService } from './auth/verification.service';
 import { WebProfileService } from './profile/webProfile.service';
 import { GoogleStrategy } from 'src/guards/google.strategy';
+import { AddressController } from './auth/address.controller';
 
 @Module({
-  controllers: [AuthController],
+  controllers: [AuthController, AddressController],
   providers: [
     AuthService,
     PrismaService,

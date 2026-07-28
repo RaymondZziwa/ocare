@@ -14,8 +14,7 @@ export class CreateDepartmentDto {
   @IsString()
   name: string;
 
-  @IsNotEmpty()
-  branchId: string;
+
 }
 
 export class CreateEmployeeDto {
@@ -42,8 +41,6 @@ export class CreateEmployeeDto {
   @IsString()
   password: string;
 
-  @IsNotEmpty()
-  salary: number;
 
   @IsOptional()
   @IsBoolean()
@@ -57,13 +54,7 @@ export class CreateEmployeeDto {
   @IsString()
   profileImage?: string;
 
-  @IsNotEmpty()
-  roleId: string;
-
-  @IsNumber() branchId?: string;
-
-  @IsOptional()
-  deptId?: string;
+  branchId!: string;
 }
 
 export class employeeProfileUpdateDto {
