@@ -180,6 +180,13 @@ export class SalesService {
             employee: true,
           },
         });
+        await tx.saleTimeLine.create({
+          data: {
+            saleId: createdSale.id,
+            state: 'CONFIRMED',
+          },
+        });
+
         return createdSale;
       });
 
@@ -271,7 +278,7 @@ export class SalesService {
         await tx.saleTimeLine.create({
           data: {
             saleId: sale.id,
-            state: 'RECIEVED',
+            state: 'CONFIRMED',
           },
         });
         return {

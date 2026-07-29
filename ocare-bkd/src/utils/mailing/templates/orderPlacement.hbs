@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>New Order – Ocare Pharmacy</title>
+</head>
+
+<body
+    style="margin:0; padding:0; background-color:#f4f6f9; color:#333; font-family: 'Segoe UI', Arial, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+    <div
+        style="max-width:600px; margin:40px auto; background-color:#ffffff; padding:30px; border-radius:10px; box-shadow:0 4px 15px rgba(0,0,0,0.1);">
+
+        <!-- Header -->
+        <div style="text-align:center; padding-bottom:20px; border-bottom:2px solid #e6e9ef;">
+            <h1 style="margin:0; font-size:26px; font-weight:700; color:#1ca24e;">
+                Ocare Pharmacy
+            </h1>
+            <p style="margin:4px 0 0; color:#777; font-size:14px;">New Order Notification</p>
+        </div>
+
+        <!-- Body -->
+        <div style="font-size:16px; line-height:1.6; color:#333; padding-top:20px;">
+            <p>Hello <strong>Admin</strong>,</p>
+
+            <p>A new online order has been successfully placed on the Ocare Pharmacy store.</p>
+
+            <p>Please log in to the admin portal to view the full order details, including customer information,
+                shipping address, payment, and item list.</p>
+
+            <div style="margin:24px 0; text-align:center;">
+                <a href="{{portalUrl}}"
+                    style="display:inline-block; background:#1ca24e; color:#ffffff; padding:14px 32px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:16px;">
+                    Go to Admin Portal
+                </a>
+            </div>
+
+            <p style="font-size:14px; color:#4a5a6a;">
+                If the button doesn't work, copy and paste the following link into your browser:
+            </p>
+            <p
+                style="word-break:break-all; font-size:13px; color:#555; background:#f4f6f9; padding:10px; border-radius:4px;">
+                {{portalUrl}}
+            </p>
+
+            <p>For any questions, contact support at <a href="mailto:support@ocareug.com"
+                    style="color:#1ca24e; text-decoration:none;">support@ocareug.com</a>.</p>
+
+            <p>Thank you,<br /><strong>The Ocare Pharmacy Team</strong></p>
+        </div>
+
+        <!-- Footer -->
+        <div
+            style="margin-top:40px; font-size:12px; color:#777; text-align:center; border-top:1px solid #e6e9ef; padding-top:20px;">
+            &copy; {{year}} Ocare Pharmacy · All rights reserved<br />
+            <a href="https://ocareug.com" style="color:#1ca24e; text-decoration:none;">www.ocareug.com</a>
+        </div>
+    </div>
+</body>
+
+</html>

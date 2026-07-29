@@ -167,6 +167,15 @@ export class MarzPayService {
             isForAppSales: true,
           },
         });
+
+        await tx.wallet.update({
+          where: { id: wallet?.id },
+          data: {
+            balance: {
+              increment: amount,
+            },
+          },
+        });
         // After transaction commits, generate and send receipt
         try {
           await this.deductStockForSale(
@@ -193,11 +202,13 @@ export class MarzPayService {
 
           // Send email with PDF attached
           await this.resendMailService.sendOrderConfirmation(
-            `${sale.client.firstName} ${sale.client.lastName}` || 'Customer',
+            `${sale.client.firstName} ${sale.client.lastName}`,
             sale.client?.email,
             orderData,
             pdfBuffer,
           );
+
+          await this.resendMailService.sendOnOrderPlacement();
         } catch (error) {
           // Log error but do not rollback transaction (order is already successful)
           console.error('Failed to send receipt email:', error);
@@ -217,6 +228,15 @@ export class MarzPayService {
         });
       }
 
+      await tx.wallet.update({
+        where: { id: wallet?.id },
+        data: {
+          balance: {
+            increment: amount,
+          },
+        },
+      });
+
       // Update sale status to fully paid
       await tx.sale.update({
         where: { salePaymentId: salePayment.id },
@@ -231,17 +251,6 @@ export class MarzPayService {
           status: 'COMPLETED',
         },
       });
-
-      if (wallet) {
-        await tx.wallet.update({
-          where: { id: wallet.id },
-          data: {
-            balance: {
-              increment: amount,
-            },
-          },
-        });
-      }
     });
   }
 

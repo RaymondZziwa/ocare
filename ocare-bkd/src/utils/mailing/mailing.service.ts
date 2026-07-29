@@ -146,4 +146,22 @@ export class ResendMailService {
       throw new Error('Failed to send order confirmation');
     }
   }
+
+  async sendOnOrderPlacement() {
+    try {
+      const html = await this.loadTemplate('orderPlacement', {
+        portalUrl: 'https://ocareportal.megaerp.com',
+        year: this.year,
+      });
+      await this.resend.emails.send({
+        from: this.configService.getOrThrow('FROM_EMAIL'),
+        to: 'ocareug@gmail.com',
+        subject: 'New Online Order Placed',
+        html,
+      });
+    } catch (error) {
+      console.error('Error sending email:', error);
+      throw new Error('Failed to send email');
+    }
+  }
 }
