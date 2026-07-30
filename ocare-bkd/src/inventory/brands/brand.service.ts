@@ -71,4 +71,20 @@ export class BrandService {
       message: 'Brand deleted successfully',
     };
   }
+
+  async findByName(name: string) {
+    if (!name) return null;
+    const upper = name.toUpperCase();
+    return this.prismaService.brand.findFirst({
+      where: {
+        name: {
+          equals: upper,
+        },
+      },
+    });
+  }
+
+  async findById(id: string) {
+    return this.prismaService.brand.findUnique({ where: { id } });
+  }
 }

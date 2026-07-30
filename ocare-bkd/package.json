@@ -56,7 +56,8 @@
     "rxjs": "^7.8.2",
     "twilio": "^5.13.1",
     "uuidv7": "^1.2.1",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -74,6 +75,7 @@
     "@types/passport-google-oauth2": "^0.1.10",
     "@types/pdfkit": "^0.17.6",
     "@types/supertest": "^6.0.2",
+    "@types/xlsx": "^0.0.35",
     "dotenv": "^17.4.2",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",

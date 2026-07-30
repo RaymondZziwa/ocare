@@ -2,10 +2,20 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { generateEAN13 } from 'src/utils/barcodeGenerator';
 import { GenericResponse } from 'src/utils/genericResponse';
+import { ItemCategoryService } from '../itemCategories/itemCateogries.service';
+import { BrandService } from '../brands/brand.service';
+import { parseExcelForItems, ExcelImportRow } from 'src/utils/excelHelper';
 
 @Injectable()
 export class ItemService {
-  constructor(private readonly prismaService: PrismaService) {}
+  private readonly DEFAULT_CATEGORY_ID = '4aa4937b-08fc-4025-9343-a556cac181db';
+  private readonly DEFAULT_BRAND_ID = '4e2f7d72-d62e-4b6a-b749-0f08f1c5c5d4';
+  private readonly DEFAULT_UNIT_ID = '4489cac9-8ed3-4191-9380-906989ce40de';
+  constructor(
+    private readonly prismaService: PrismaService, // Fallback IDs for when category/brand name is not found
+    private categoriesService: ItemCategoryService,
+    private brandsService: BrandService,
+  ) {}
 
   async create(data: {
     categoryId: string;
@@ -258,6 +268,75 @@ export class ItemService {
       status: 200,
       data: item,
       message: 'Item deleted successfully',
+    };
+  }
+
+  async importItemsFromExcelRows(rows: ExcelImportRow[]) {
+    const imported: any[] = [];
+    const errors: string[] = [];
+
+    for (const row of rows) {
+      try {
+        if (!row.productName) {
+          errors.push('Missing product name in row');
+          continue;
+        }
+
+        let categoryId = this.DEFAULT_CATEGORY_ID;
+        if (row.categoryName) {
+          const category = await this.categoriesService.findByName(
+            row.categoryName,
+          );
+          if (category) {
+            categoryId = category.id;
+          } else {
+            errors.push(
+              `Category "${row.categoryName}" not found for "${row.productName}" – using fallback`,
+            );
+          }
+        }
+
+        let brandId = this.DEFAULT_BRAND_ID;
+        if (row.brandName) {
+          const brand = await this.brandsService.findByName(row.brandName);
+          if (brand) {
+            brandId = brand.id;
+          } else {
+            errors.push(
+              `Brand "${row.brandName}" not found for "${row.productName}" – using fallback`,
+            );
+          }
+        }
+
+        const created = await this.prismaService.item.create({
+          data: {
+            name: row.productName,
+            description: '',
+            categoryId,
+            brandId,
+            unitId: this.DEFAULT_UNIT_ID,
+            buyingPrice: row.buyingPrice,
+            sellingPrice: row.sellingPrice,
+            alertStockLevel: row.alertStockLevel ?? 0,
+            showInPos: true,
+            image: '',
+            barcode: '',
+            sideEffects: '',
+            variation: '',
+          },
+        });
+
+        imported.push(created);
+      } catch (error: any) {
+        errors.push(`Error importing "${row.productName}": ${error.message}`);
+      }
+    }
+
+    return {
+      importedCount: imported.length,
+      imported,
+      errors,
+      totalRows: rows.length,
     };
   }
 }

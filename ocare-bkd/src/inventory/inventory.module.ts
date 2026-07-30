@@ -15,13 +15,23 @@ import { CompanyService } from 'src/company-profile/profile.service';
 import { BrandController } from './brands/brand.controller';
 import { BrandService } from './brands/brand.service';
 import { StockTransferIdGeneratorService } from 'src/utils/stockTransferIdGenerator';
+import { MulterModule } from '@nestjs/platform-express';
+import { ItemUploadController } from './items/itemUpload.controller';
 
 @Module({
+  imports: [
+    MulterModule.register({
+      limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB limit
+      },
+    }),
+  ],
   controllers: [
     BrandController,
     ItemCategoryController,
     ItemController,
     StoresController,
+    ItemUploadController,
     MeasurementUnitController,
     StockMovementController,
   ],

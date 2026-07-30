@@ -61,4 +61,20 @@ export class ItemCategoryService {
       message: 'Item category deleted successfully',
     };
   }
+
+  async findByName(name: string) {
+    if (!name) return null;
+    const upper = name.toUpperCase();
+    return this.prismaService.itemCategory.findFirst({
+      where: {
+        name: {
+          equals: upper,
+        },
+      },
+    });
+  }
+
+  async findById(id: string) {
+    return this.prismaService.itemCategory.findUnique({ where: { id } });
+  }
 }
