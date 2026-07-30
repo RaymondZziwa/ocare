@@ -23,9 +23,8 @@ export class ReceiptService {
         const PAGE_WIDTH = 595.28;
         const PAGE_HEIGHT = 841.89;
         const MARGIN = 50;
-        // Usable area
         const MAX_Y = PAGE_HEIGHT - MARGIN;
-        const ROW_HEIGHT = 16; // height per item row
+        const ROW_HEIGHT = 16;
 
         const doc = new PDFDocument({
           size: [PAGE_WIDTH, PAGE_HEIGHT],
@@ -42,26 +41,15 @@ export class ReceiptService {
           resolve(Buffer.concat(buffers));
         });
 
-        // Helper to draw a horizontal line
         const drawLine = (y: number) => {
           doc.moveTo(MARGIN, y).lineTo(PAGE_WIDTH - MARGIN, y).stroke();
         };
 
-        // Helper: check if we need a new page for the next block
-        const ensureSpace = (needed: number, currentY: number) => {
-          if (currentY + needed > MAX_Y) {
-            doc.addPage();
-            return MARGIN; // reset Y to top margin
-          }
-          return currentY;
-        };
-
-        // ----- Draw the page header (business info, receipt metadata, table headers) -----
         const drawPageHeader = (isFirstPage: boolean): number => {
           let y = MARGIN;
 
           if (isFirstPage) {
-            // ----- Logo and Business Info -----
+            // Logo and Business Info
             if (fs.existsSync(this.LOGO_PATH)) {
               try {
                 const logoWidth = 80;
@@ -71,46 +59,43 @@ export class ReceiptService {
                 doc.font('Helvetica-Bold').fontSize(18);
                 doc.text(this.BUSINESS_NAME, infoX, y + 5, {
                   width: PAGE_WIDTH - infoX - MARGIN,
-                  align: 'left',
+                  align: 'left' as const,
                 });
                 doc.font('Helvetica').fontSize(10);
                 doc.text(this.ADDRESS, infoX, y + 30, {
                   width: PAGE_WIDTH - infoX - MARGIN,
-                  align: 'left',
+                  align: 'left' as const,
                 });
                 doc.text(`Tel: ${this.PHONE}  |  Email: ${this.EMAIL}`, infoX, y + 45, {
                   width: PAGE_WIDTH - infoX - MARGIN,
-                  align: 'left',
+                  align: 'left' as const,
                 });
                 y += Math.max(logoHeight, 60) + 10;
               } catch {
-                // Fallback: centered text
+                // Fallback centered
                 doc.font('Helvetica-Bold').fontSize(20);
-                doc.text(this.BUSINESS_NAME, { align: 'center' });
+                doc.text(this.BUSINESS_NAME, { align: 'center' as const });
                 doc.font('Helvetica').fontSize(10);
-                doc.text(this.ADDRESS, { align: 'center' });
-                doc.text(`Tel: ${this.PHONE}  |  Email: ${this.EMAIL}`, { align: 'center' });
+                doc.text(this.ADDRESS, { align: 'center' as const });
+                doc.text(`Tel: ${this.PHONE}  |  Email: ${this.EMAIL}`, { align: 'center' as const });
                 y = doc.y + 10;
               }
             } else {
-              // No logo: centered header
               doc.font('Helvetica-Bold').fontSize(20);
-              doc.text(this.BUSINESS_NAME, { align: 'center' });
+              doc.text(this.BUSINESS_NAME, { align: 'center' as const });
               doc.font('Helvetica').fontSize(10);
-              doc.text(this.ADDRESS, { align: 'center' });
-              doc.text(`Tel: ${this.PHONE}  |  Email: ${this.EMAIL}`, { align: 'center' });
+              doc.text(this.ADDRESS, { align: 'center' as const });
+              doc.text(`Tel: ${this.PHONE}  |  Email: ${this.EMAIL}`, { align: 'center' as const });
               y = doc.y + 10;
             }
 
             drawLine(y);
             y += 12;
 
-            // Receipt Title
             doc.font('Helvetica-Bold').fontSize(16);
-            doc.text('SALES RECEIPT', { align: 'center' });
+            doc.text('SALES RECEIPT', { align: 'center' as const });
             y = doc.y + 8;
 
-            // Receipt Metadata
             const orderDate = sale.createdAt
               ? new Date(sale.createdAt).toLocaleDateString('en-UG', {
                   year: 'numeric',
@@ -137,8 +122,9 @@ export class ReceiptService {
             const lineHeight = 16;
             let metaY = y;
 
-            const labelStyle = { continued: true, width: 100, align: 'left' };
-            const valueStyle = { align: 'left' };
+            // Explicitly type options with 'as const'
+            const labelStyle = { continued: true, width: 100, align: 'left' as const };
+            const valueStyle = { align: 'left' as const };
 
             doc.font('Helvetica-Bold');
             doc.text('Receipt #:', col1X, metaY, labelStyle);
@@ -189,18 +175,17 @@ export class ReceiptService {
             drawLine(y);
             y += 10;
           } else {
-            // Subsequent pages: compact header with "Continued..."
             doc.font('Helvetica-Bold').fontSize(14);
-            doc.text('RECEIPT (Continued)', { align: 'center' });
+            doc.text('RECEIPT (Continued)', { align: 'center' as const });
             y = doc.y + 8;
             doc.font('Helvetica').fontSize(9);
-            doc.text(`Receipt #: ${sale.id || 'N/A'}`, { align: 'center' });
+            doc.text(`Receipt #: ${sale.id || 'N/A'}`, { align: 'center' as const });
             y = doc.y + 6;
             drawLine(y);
             y += 8;
           }
 
-          // ----- Table Headers (on every page) -----
+          // Table headers (on every page)
           const colWidths = [30, 180, 40, 80, 80];
           const startX = MARGIN;
           const xPositions: number[] = [];
@@ -211,27 +196,24 @@ export class ReceiptService {
           });
 
           doc.font('Helvetica-Bold').fontSize(10);
-          doc.text('Item #', xPositions[0], y, { width: colWidths[0], align: 'center' });
-          doc.text('Description', xPositions[1], y, { width: colWidths[1], align: 'left' });
-          doc.text('Qty', xPositions[2], y, { width: colWidths[2], align: 'center' });
-          doc.text('Unit Price', xPositions[3], y, { width: colWidths[3], align: 'right' });
-          doc.text('Total', xPositions[4], y, { width: colWidths[4], align: 'right' });
+          doc.text('Item #', xPositions[0], y, { width: colWidths[0], align: 'center' as const });
+          doc.text('Description', xPositions[1], y, { width: colWidths[1], align: 'left' as const });
+          doc.text('Qty', xPositions[2], y, { width: colWidths[2], align: 'center' as const });
+          doc.text('Unit Price', xPositions[3], y, { width: colWidths[3], align: 'right' as const });
+          doc.text('Total', xPositions[4], y, { width: colWidths[4], align: 'right' as const });
           y += 18;
 
           drawLine(y);
           y += 6;
 
-          // Return the current Y position after headers
           return y;
         };
 
-        // ----- Main document generation -----
-        let currentY = drawPageHeader(true); // first page
-
+        // Main generation
+        let currentY = drawPageHeader(true);
         const items = sale.items || [];
         let subtotal = 0;
 
-        // Store xPositions for item rows (reuse)
         const colWidths = [30, 180, 40, 80, 80];
         const startX = MARGIN;
         const xPositions: number[] = [];
@@ -241,7 +223,6 @@ export class ReceiptService {
           xAcc += w;
         });
 
-        // Draw items
         doc.font('Helvetica').fontSize(9);
 
         for (let i = 0; i < items.length; i++) {
@@ -253,84 +234,72 @@ export class ReceiptService {
 
           const name = (item.product?.name || item.name || 'Product').substring(0, 30);
 
-          // Check if we have space for this row + at least 5 more rows + totals (approx 100 pts)
           const neededForRow = ROW_HEIGHT;
-          const neededForFooter = 80; // totals + thank you
+          const neededForFooter = 80;
           const neededTotal = neededForRow + neededForFooter;
 
           if (currentY + neededTotal > MAX_Y) {
-            // Need a new page
             doc.addPage();
-            currentY = drawPageHeader(false); // compact header
-            // Re-draw table headers already included in drawPageHeader
-            // Now currentY points to just after the header line
+            currentY = drawPageHeader(false);
           }
 
-          // Draw the item row at currentY
           const rowY = currentY;
-          doc.text((i + 1).toString(), xPositions[0], rowY, { width: colWidths[0], align: 'center' });
-          doc.text(name, xPositions[1], rowY, { width: colWidths[1], align: 'left' });
-          doc.text(qty.toString(), xPositions[2], rowY, { width: colWidths[2], align: 'center' });
-          doc.text(unitPrice.toFixed(2), xPositions[3], rowY, { width: colWidths[3], align: 'right' });
-          doc.text(total.toFixed(2), xPositions[4], rowY, { width: colWidths[4], align: 'right' });
+          doc.text((i + 1).toString(), xPositions[0], rowY, { width: colWidths[0], align: 'center' as const });
+          doc.text(name, xPositions[1], rowY, { width: colWidths[1], align: 'left' as const });
+          doc.text(qty.toString(), xPositions[2], rowY, { width: colWidths[2], align: 'center' as const });
+          doc.text(unitPrice.toFixed(2), xPositions[3], rowY, { width: colWidths[3], align: 'right' as const });
+          doc.text(total.toFixed(2), xPositions[4], rowY, { width: colWidths[4], align: 'right' as const });
 
           currentY += ROW_HEIGHT;
         }
 
-        // ----- Draw Totals and Footer on the last page -----
         const totalAmount = sale.total || subtotal;
         const tax = sale.tax || 0;
         const discount = sale.discount || 0;
         const grandTotal = totalAmount + tax - discount;
 
-        // Check if there's enough space for totals and footer; if not, add new page.
-        const neededForTotals = 80; // approx
-        if (currentY + neededForTotals > MAX_Y) {
+        if (currentY + 80 > MAX_Y) {
           doc.addPage();
           currentY = drawPageHeader(false);
         }
 
-        // Separator before totals
         drawLine(currentY);
         currentY += 8;
 
-        // Totals (right-aligned)
         const totalsX = PAGE_WIDTH - MARGIN - 150;
         doc.font('Helvetica').fontSize(10);
-        doc.text(`Subtotal:`, totalsX, currentY, { width: 100, align: 'right' });
-        doc.text(`UGX ${subtotal.toFixed(2)}`, totalsX + 100, currentY, { width: 50, align: 'right' });
+        doc.text(`Subtotal:`, totalsX, currentY, { width: 100, align: 'right' as const });
+        doc.text(`UGX ${subtotal.toFixed(2)}`, totalsX + 100, currentY, { width: 50, align: 'right' as const });
         currentY += 16;
 
         if (discount > 0) {
-          doc.text(`Discount:`, totalsX, currentY, { width: 100, align: 'right' });
-          doc.text(`- UGX ${discount.toFixed(2)}`, totalsX + 100, currentY, { width: 50, align: 'right' });
+          doc.text(`Discount:`, totalsX, currentY, { width: 100, align: 'right' as const });
+          doc.text(`- UGX ${discount.toFixed(2)}`, totalsX + 100, currentY, { width: 50, align: 'right' as const });
           currentY += 16;
         }
         if (tax > 0) {
-          doc.text(`Tax (${sale.taxRate || 0}%):`, totalsX, currentY, { width: 100, align: 'right' });
-          doc.text(`UGX ${tax.toFixed(2)}`, totalsX + 100, currentY, { width: 50, align: 'right' });
+          doc.text(`Tax (${sale.taxRate || 0}%):`, totalsX, currentY, { width: 100, align: 'right' as const });
+          doc.text(`UGX ${tax.toFixed(2)}`, totalsX + 100, currentY, { width: 50, align: 'right' as const });
           currentY += 16;
         }
 
         doc.font('Helvetica-Bold').fontSize(12);
-        doc.text(`TOTAL:`, totalsX, currentY, { width: 100, align: 'right' });
-        doc.text(`UGX ${grandTotal.toFixed(2)}`, totalsX + 100, currentY, { width: 50, align: 'right' });
+        doc.text(`TOTAL:`, totalsX, currentY, { width: 100, align: 'right' as const });
+        doc.text(`UGX ${grandTotal.toFixed(2)}`, totalsX + 100, currentY, { width: 50, align: 'right' as const });
         currentY += 24;
 
         drawLine(currentY);
         currentY += 12;
 
-        // Footer (thank you message, return policy)
         doc.font('Helvetica').fontSize(9);
-        doc.text('Thank you for choosing Ocare Pharmacy!', { align: 'center' });
-        doc.text('We value your health and trust.', { align: 'center' });
+        doc.text('Thank you for choosing Ocare Pharmacy!', { align: 'center' as const });
+        doc.text('We value your health and trust.', { align: 'center' as const });
         currentY = doc.y + 8;
 
         doc.fontSize(8);
-        doc.text('For inquiries, contact us at support@ocareug.com', { align: 'center' });
-        doc.text('Items returned within 7 days with original receipt.', { align: 'center' });
+        doc.text('For inquiries, contact us at support@ocareug.com', { align: 'center' as const });
+        doc.text('Items returned within 7 days with original receipt.', { align: 'center' as const });
 
-        // End the document
         doc.end();
       } catch (error) {
         reject(error);

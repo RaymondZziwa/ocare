@@ -14,10 +14,10 @@ export class CreateClientDto {
   @IsOptional()
   phone?: string;
 
-  dob!: Date;
+  //dob!: Date;
 
   @IsString()
-  gender!: 'MALE' | 'FEMALE';
+  gender!: 'Male' | 'Female';
 
   @IsString()
   @IsOptional()

@@ -72,6 +72,7 @@
     "@types/multer": "^2.2.0",
     "@types/node": "^22.10.7",
     "@types/passport-google-oauth2": "^0.1.10",
+    "@types/pdfkit": "^0.17.6",
     "@types/supertest": "^6.0.2",
     "dotenv": "^17.4.2",
     "eslint": "^9.18.0",

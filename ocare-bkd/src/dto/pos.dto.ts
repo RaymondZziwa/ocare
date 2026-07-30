@@ -81,6 +81,8 @@ export class CreateSaleDto {
   @IsNumber()
   total: number;
 
+  amountToCharge: number;
+
   @IsNumber()
   balance: number;
 

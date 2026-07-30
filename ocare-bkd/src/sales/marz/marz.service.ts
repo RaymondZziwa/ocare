@@ -172,7 +172,7 @@ export class MarzPayService {
           where: { id: wallet?.id },
           data: {
             balance: {
-              increment: amount,
+              increment: sale.total,
             },
           },
         });
@@ -232,7 +232,7 @@ export class MarzPayService {
         where: { id: wallet?.id },
         data: {
           balance: {
-            increment: amount,
+            increment: sale.total,
           },
         },
       });

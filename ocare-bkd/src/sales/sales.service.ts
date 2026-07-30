@@ -75,6 +75,7 @@ export class SalesService {
       servedBy,
       source,
       storeId,
+      amountToCharge,
       items,
       paymentMethod,
       notes,
@@ -138,7 +139,7 @@ export class SalesService {
       }
 
       const response = await this.initiateMobileMoneyCollection(
-        source === 'In_shop' ? total : totalWithDelivery,
+        source === 'In_shop' ? amountToCharge : totalWithDelivery,
         `+${phoneNumber}`,
       );
 

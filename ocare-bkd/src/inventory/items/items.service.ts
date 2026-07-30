@@ -10,7 +10,7 @@ export class ItemService {
   async create(data: {
     categoryId: string;
     name: string;
-    price: number;
+    price: number; // Note: Ensure you remove this or map it if needed, it's not in the schema
     brandId: string;
     buyingPrice: number;
     sellingPrice: number;
@@ -19,23 +19,60 @@ export class ItemService {
     image: string;
     description: string;
     showInPos: boolean;
-    variation?: any[];
-    sideEffects?: any[];
+    variation?: any;
+    sideEffects?: any;
   }): Promise<GenericResponse> {
     // Generate barcode
     const barcode = generateEAN13();
 
-    // Destructure all relation IDs so they're passed as direct scalar fields
-    const { categoryId, brandId, unitId, ...rest } = data;
+    // Helper function to safely handle JSON strings or arrays
+    const parseJsonField = (field: any) => {
+      if (!field) return [];
+      if (typeof field === 'string') {
+        try {
+          return JSON.parse(field);
+        } catch {
+          return [];
+        }
+      }
+      return field;
+    };
+
+    // Explicitly destruct and separate fields to prevent leaking 'price' into Prisma
+    const {
+      categoryId,
+      name,
+      brandId,
+      buyingPrice,
+      sellingPrice,
+      alertStockLevel,
+      unitId,
+      image,
+      description,
+      showInPos,
+      variation,
+      sideEffects,
+    } = data;
 
     const item = await this.prismaService.item.create({
       data: {
-        ...rest,
-        categoryId,
-        brandId,
-        unitId,
+        name,
+        buyingPrice,
+        sellingPrice,
+        image,
+        description: description || '', // Protects against null violations
+        showInPos: showInPos ?? false,
         barcode,
-        alertStockLevel: rest.alertStockLevel ? rest.alertStockLevel : 0,
+        alertStockLevel: alertStockLevel || 0,
+
+        // Pass clean, parsed JSON values
+        variation: parseJsonField(variation),
+        sideEffects: parseJsonField(sideEffects),
+
+        // Use explicit relational connections to satisfy Prisma constraints
+        category: { connect: { id: categoryId } },
+        brand: { connect: { id: brandId } },
+        unit: { connect: { id: unitId } },
       },
     });
 

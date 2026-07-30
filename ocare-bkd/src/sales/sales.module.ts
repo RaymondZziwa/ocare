@@ -10,9 +10,11 @@ import { ResendMailService } from 'src/utils/mailing/mailing.service';
 import { ReceiptService } from 'src/web-app/orders/receiptGeneration.service';
 import { VerificationService } from 'src/web-app/auth/verification.service';
 import { JwtService } from '@nestjs/jwt';
+import { ClientModule } from './customers/customer.module';
+import { AppOrdersModule } from './orders/orders.module';
 
 @Module({
-  imports: [ConfigModule, HttpModule],
+  imports: [ConfigModule, HttpModule, ClientModule, AppOrdersModule],
   controllers: [SalesController, MarzController],
   providers: [
     PrismaService,
@@ -21,7 +23,7 @@ import { JwtService } from '@nestjs/jwt';
     ResendMailService,
     ReceiptService,
     VerificationService,
-    JwtService
+    JwtService,
   ],
 })
 export class SalesModule {}
