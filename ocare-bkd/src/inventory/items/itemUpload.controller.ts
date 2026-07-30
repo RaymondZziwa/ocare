@@ -12,7 +12,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ItemService } from './items.service';
 import { parseExcelForItems } from 'src/utils/excelHelper';
 
-@Controller('items')
+@Controller('api/items')
 export class ItemUploadController {
   constructor(private readonly itemsService: ItemService) {}
 
