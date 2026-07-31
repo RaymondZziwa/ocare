@@ -24,6 +24,7 @@ export class ItemService {
     brandId: string;
     buyingPrice: number;
     sellingPrice: number;
+    wholeSalePrice: number;
     alertStockLevel?: number;
     unitId: string;
     image: string;
@@ -106,6 +107,41 @@ export class ItemService {
       status: 200,
       data: items,
       message: 'Items fetched successfully',
+    };
+  }
+
+  async findAllForApp(): Promise<GenericResponse> {
+    // Use findFirst because isForAppSales is not a unique field
+    const store = await this.prismaService.store.findFirst({
+      where: { isForAppSales: true },
+    });
+
+    if (!store) {
+      return {
+        status: 404,
+        data: [],
+        message: 'Store not found',
+      };
+    }
+
+    const items = await this.prismaService.productInventory.findMany({
+      where: { storeId: store.id }, // or { store: { id: store.id } } if your schema uses nested relations
+      include: {
+        item: {
+          include: {
+            category: true,
+            brand: true,
+          },
+        },
+        store: true,
+        unit: true,
+      },
+    });
+
+    return {
+      status: 200,
+      data: items,
+      message: 'Selected store inventory fetched successfully',
     };
   }
 

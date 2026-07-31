@@ -32,6 +32,7 @@ export class ItemController {
       alertStockLevel?: number;
       unitId: string;
       sellingPrice: number;
+      wholeSalePrice: number;
       showInPos: boolean;
       variation?: any[];
       sideEffects?: any[];
@@ -43,6 +44,11 @@ export class ItemController {
   @Get('fetch-all')
   findAll() {
     return this.itemCategoryService.findAll();
+  }
+
+  @Get('fetch-all-for-app')
+  findAllForApp() {
+    return this.itemCategoryService.findAllForApp();
   }
 
   @Get('fetch-store-inventory/:id')
