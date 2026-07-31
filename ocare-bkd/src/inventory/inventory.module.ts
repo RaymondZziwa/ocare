@@ -17,6 +17,8 @@ import { BrandService } from './brands/brand.service';
 import { StockTransferIdGeneratorService } from 'src/utils/stockTransferIdGenerator';
 import { MulterModule } from '@nestjs/platform-express';
 import { ItemUploadController } from './items/itemUpload.controller';
+import { InventoryController } from './stockMovement/import.controller';
+import { InventoryService } from './stockMovement/import.service';
 
 @Module({
   imports: [
@@ -34,6 +36,7 @@ import { ItemUploadController } from './items/itemUpload.controller';
     ItemUploadController,
     MeasurementUnitController,
     StockMovementController,
+    InventoryController,
   ],
   providers: [
     BrandService,
@@ -46,6 +49,7 @@ import { ItemUploadController } from './items/itemUpload.controller';
     //DeliveryNoteService,
     CompanyService,
     StockTransferIdGeneratorService,
+    InventoryService,
   ],
 })
 export class InventoryModule {}
