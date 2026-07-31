@@ -32,10 +32,10 @@ export class InventoryController {
     }
 
     // Get employee ID from authenticated user (adjust based on your user structure)
-    const employeeId = '9f4fdd2d-9de9-4894-8ccb-033b73ece71c'; // or req.user.employeeId
+    const employeeId = 'ee6fa238-c2c8-4165-b0da-2827a8e612cc'; // or req.user.employeeId
 
     // Fixed store ID (you can also pass it as a query param if needed)
-    const storeId = 'b4bc135a-2158-4ddb-9974-73f79d1d8360';
+    const storeId = 'c6a83ae2-b29e-4d17-8c14-dcc0c53a5aff';
 
     const result = await this.inventoryService.importStockFromExcel(
       file.buffer,
