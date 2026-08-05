@@ -1,59 +1,25 @@
-// import {
-//   IsDateString,
-//   IsEnum,
-//   IsNotEmpty,
-//   IsNumber,
-//   IsOptional,
-//   IsString,
-// } from 'class-validator';
-// import { PartialType } from '@nestjs/mapped-types';
-// import { PaymentType } from '@prisma/client';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { PartialType } from '@nestjs/mapped-types';
 
-// export class CreateSupplierDto {
-//   @IsString()
-//   @IsNotEmpty()
-//   firstName: string;
+export class CreateSupplierDto {
+  @IsString()
+  businessName!: string;
 
-//   @IsString()
-//   @IsNotEmpty()
-//   lastName: string;
+  @IsString()
+  firstName!: string;
 
-//   @IsString()
-//   @IsNotEmpty()
-//   contact: string;
+  @IsString()
+  lastName!: string;
 
-//   @IsString()
-//   @IsOptional()
-//   address?: string;
-// }
+  @IsString()
+  @IsNotEmpty()
+  contact!: string;
 
-// export class SupplierPaymentDto {
-//   @IsString()
-//   supplyId: string;
+  @IsString()
+  @IsOptional()
+  address?: string;
 
-//   @IsEnum(PaymentType)
-//   paymentType: PaymentType;
+  type!: 'INDIVIDUAL' | 'BUSINESS';
+}
 
-//   @IsString()
-//   bankName: string;
-
-//   @IsNumber()
-//   amount: number;
-
-//   @IsString()
-//   paidBy: string;
-
-//   @IsOptional()
-//   @IsString()
-//   barterItemName?: string;
-
-//   @IsOptional()
-//   @IsString()
-//   chequeNumber?: string;
-
-//   @IsOptional()
-//   @IsDateString()
-//   chequeBankingDate?: string; // ISO date string
-// }
-
-// export class UpdateSupplierDto extends PartialType(CreateSupplierDto) {}
+export class UpdateSupplierDto extends PartialType(CreateSupplierDto) {}

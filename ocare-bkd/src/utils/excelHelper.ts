@@ -1,118 +1,169 @@
-// src/utils/excelHelper.ts
-import * as XLSX from 'xlsx';
-import { BadRequestException } from '@nestjs/common';
+// // src/utils/excelHelper.ts
 
-export interface ExcelImportRow {
-  productName: string;
-  buyingPrice: number;
-  sellingPrice: number;
-  categoryName: string;
-  brandName: string;
-  alertStockLevel: number;
-}
+// import * as XLSX from 'xlsx';
+// import { BadRequestException } from '@nestjs/common';
 
-export function parseExcelForItems(buffer: Buffer): ExcelImportRow[] {
-  const workbook = XLSX.read(buffer, { type: 'buffer' });
-  const sheetName = workbook.SheetNames[0];
-  const worksheet = workbook.Sheets[sheetName];
-  const data = XLSX.utils.sheet_to_json(worksheet) as any[];
+// export interface ExcelImportRow {
+//   productName: string;
+//   buyingPrice: number;
+//   sellingPrice: number;
+//   categoryName: string;
+//   sku?: string;
+//   brandName: string;
+//   alertStockLevel: number;
+// }
 
-  if (!data || data.length === 0) {
-    throw new BadRequestException('Excel file is empty.');
-  }
+// export function parseExcelForItems(buffer: Buffer): ExcelImportRow[] {
+//   const workbook = XLSX.read(buffer, { type: 'buffer' });
 
-  const headers = Object.keys(data[0]);
-  console.log('📊 Excel headers:', headers);
-  console.log('📋 First row sample:', data[0]);
+//   const sheetName = workbook.SheetNames[0];
 
-  // Helper: try exact match first, then fallback to keyword search
-  const findColumn = (exactNames: string[], fallbackKeywords: string[] = []): string | null => {
-    // Exact match (case‑insensitive, trimmed)
-    for (const h of headers) {
-      const trimmed = h.trim();
-      if (exactNames.some(name => trimmed.toLowerCase() === name.toLowerCase())) {
-        return trimmed;
-      }
-    }
-    // Fallback: header contains any of the keywords
-    if (fallbackKeywords.length) {
-      for (const h of headers) {
-        const lower = h.toLowerCase();
-        if (fallbackKeywords.some(kw => lower.includes(kw.toLowerCase()))) {
-          return h;
-        }
-      }
-    }
-    return null;
-  };
+//   if (!sheetName) {
+//     throw new BadRequestException('Excel file has no sheets.');
+//   }
 
-  // Map columns – add exact names you expect, and fallback keywords
-  const colProduct = findColumn(
-    ['Product', 'Item Name', 'Name'],
-    ['product', 'item']
-  );
-  const colBuyPrice = findColumn(
-    ['BuyingPrice', 'Buying Price', 'Purchase Price', 'Unit Purchase Price'],
-    ['buying', 'purchase', 'cost']
-  );
-  const colSellPrice = findColumn(
-    ['SellingPrice', 'Selling Price', 'Sale Price', 'Price'],
-    ['selling', 'sale', 'price']
-  );
-  const colCategory = findColumn(
-    ['Category', 'Product Type', 'Type'],
-    ['category', 'type']
-  );
-  const colBrand = findColumn(
-    ['Brand', 'Manufacturer'],
-    ['brand', 'manufacturer']
-  );
-  // We don't have a stock column – we'll default to 0
+//   const worksheet = workbook.Sheets[sheetName];
 
-  console.log('✅ Mapped columns:', {
-    Product: colProduct,
-    BuyingPrice: colBuyPrice,
-    SellingPrice: colSellPrice,
-    Category: colCategory,
-    Brand: colBrand,
-  });
+//   const data = XLSX.utils.sheet_to_json(worksheet);
 
-  return data.map((row: any, index: number) => {
-    const getValue = (col: string | null): string => {
-      if (!col) return '';
-      const val = row[col];
-      return val !== undefined && val !== null ? String(val).trim() : '';
-    };
+//   if (!data || data.length === 0) {
+//     throw new BadRequestException('Excel file is empty.');
+//   }
 
-    const getNumber = (col: string | null): number => {
-      const raw = getValue(col);
-      if (!raw) return 0;
-      const cleaned = raw.replace(/[^0-9.]/g, '');
-      const num = parseFloat(cleaned);
-      return isNaN(num) ? 0 : num;
-    };
+//   const headers = Object.keys(data[0]);
 
-    const productName = getValue(colProduct);
-    const buyingPrice = getNumber(colBuyPrice);
-    const sellingPrice = getNumber(colSellPrice);
+//   console.log('📊 Excel headers:', headers);
+//   console.log('📋 First row sample:', data[0]);
 
-    if (index < 5) {
-      console.log(`🔎 Row ${index + 1}:`, {
-        productName,
-        rawBuying: row[colBuyPrice || ''] || 'N/A',
-        buyingPrice,
-        rawSelling: row[colSellPrice || ''] || 'N/A',
-        sellingPrice,
-      });
-    }
+//   // Find matching column names
+//   const findColumn = (
+//     exactNames: string[],
+//     fallbackKeywords: string[] = [],
+//   ): string | null => {
+//     // Exact match
+//     for (const header of headers) {
+//       const trimmed = header.trim();
 
-    return {
-      productName: productName || `Unnamed-${index + 1}`,
-      buyingPrice,
-      sellingPrice,
-      categoryName: getValue(colCategory),
-      brandName: getValue(colBrand),
-      alertStockLevel: 0,
-    };
-  });
-}
+//       if (
+//         exactNames.some((name) => trimmed.toLowerCase() === name.toLowerCase())
+//       ) {
+//         return trimmed;
+//       }
+//     }
+
+//     // Keyword fallback
+//     for (const header of headers) {
+//       const lower = header.toLowerCase();
+
+//       if (
+//         fallbackKeywords.some((keyword) =>
+//           lower.includes(keyword.toLowerCase()),
+//         )
+//       ) {
+//         return header;
+//       }
+//     }
+
+//     return null;
+//   };
+
+//   const colProduct = findColumn(
+//     ['Product', 'Item Name', 'Name'],
+//     ['product', 'item'],
+//   );
+
+//   const colBuyPrice = findColumn(
+//     ['BuyingPrice', 'Buying Price', 'Purchase Price', 'Unit Purchase Price'],
+//     ['buying', 'purchase', 'cost'],
+//   );
+
+//   const colSellPrice = findColumn(
+//     ['SellingPrice', 'Selling Price', 'Sale Price', 'Price'],
+//     ['selling', 'sale', 'price'],
+//   );
+
+//   const colSku = findColumn(
+//     ['SKU', 'Stock Keeping Unit', 'Product Code'],
+//     ['sku', 'product code'],
+//   );
+
+//   const colCategory = findColumn(
+//     ['Category', 'Product Type', 'Type'],
+//     ['category', 'type'],
+//   );
+
+//   const colBrand = findColumn(
+//     ['Brand', 'Manufacturer'],
+//     ['brand', 'manufacturer'],
+//   );
+
+//   console.log('✅ Mapped columns:', {
+//     Product: colProduct,
+//     BuyingPrice: colBuyPrice,
+//     SellingPrice: colSellPrice,
+//     SKU: colSku,
+//     Category: colCategory,
+//     Brand: colBrand,
+//   });
+
+//   const getValue = (
+//     row: Record<string, any>,
+//     column: string | null,
+//   ): string => {
+//     if (!column) return '';
+
+//     const value = row[column];
+
+//     if (value === undefined || value === null) {
+//       return '';
+//     }
+
+//     return String(value).trim();
+//   };
+
+//   const getNumber = (
+//     row: Record<string, any>,
+//     column: string | null,
+//   ): number => {
+//     const value = getValue(row, column);
+
+//     if (!value) return 0;
+
+//     const cleaned = value.replace(/[^0-9.]/g, '');
+
+//     const number = parseFloat(cleaned);
+
+//     return Number.isNaN(number) ? 0 : number;
+//   };
+
+//   return data.map((row, index) => {
+//     const productName = getValue(row, colProduct);
+
+//     const buyingPrice = getNumber(row, colBuyPrice);
+
+//     const sellingPrice = getNumber(row, colSellPrice);
+
+//     const sku = colSku ? getValue(row, colSku) : undefined;
+
+//     if (index < 5) {
+//       console.log(`🔎 Row ${index + 1}:`, {
+//         productName,
+//         sku,
+//         buyingPrice,
+//         sellingPrice,
+//         category: getValue(row, colCategory),
+//         brand: getValue(row, colBrand),
+//       });
+//     }
+
+//     return {
+//       productName: productName || `Unnamed-${index + 1}`,
+//       buyingPrice,
+//       sellingPrice,
+//       sku,
+//       categoryName: getValue(row, colCategory),
+//       brandName: getValue(row, colBrand),
+//       alertStockLevel: 0,
+//     };
+//   });
+// }

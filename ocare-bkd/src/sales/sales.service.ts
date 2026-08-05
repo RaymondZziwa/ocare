@@ -5,9 +5,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { CreateDraftSaleDto } from 'src/dto/draftSale.dto';
 import { CreateSaleDto } from 'src/dto/pos.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { ResendMailService } from 'src/utils/mailing/mailing.service';
 import { collectPayment } from 'src/utils/payments/collectPayment';
+import { QuotationService } from 'src/web-app/orders/quotationGeneration.service';
 
 export interface CollectionResponse {
   status: string;
@@ -49,6 +52,8 @@ export class SalesService {
     private readonly prisma: PrismaService,
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
+    private readonly resendMailService: ResendMailService,
+    private readonly quotationService: QuotationService,
   ) {}
 
   private async initiateMobileMoneyCollection(
@@ -345,6 +350,97 @@ export class SalesService {
     return {
       data: sales,
       message: 'User purchases retrieved successfully',
+    };
+  }
+
+  async saveDraft(dto: CreateDraftSaleDto) {
+    if (dto.customerId) {
+      const customer = await this.prisma.client.findUnique({
+        where: {
+          id: dto.customerId,
+        },
+      });
+
+      if (!customer) {
+        throw new BadRequestException('Customer not found.');
+      }
+    }
+
+    const draft = await this.prisma.draftSale.upsert({
+      where: {
+        id: dto.id,
+      },
+      update: {
+        customerId: dto.customerId || null,
+        cart: dto.cart,
+        paymentMethod: dto.paymentMethod,
+        amountPaid: dto.amountPaid,
+        notes: dto.notes,
+        phoneNumber: dto.phoneNumber,
+      },
+      create: {
+        customerId: dto.customerId || null,
+        cart: dto.cart,
+        paymentMethod: dto.paymentMethod,
+        amountPaid: dto.amountPaid,
+        notes: dto.notes,
+        phoneNumber: dto.phoneNumber,
+      },
+    });
+
+    return {
+      status: 200,
+      message: 'Draft saved successfully.',
+      data: draft,
+    };
+  }
+
+  async getAllDraftSales() {
+    const drafts = await this.prisma.draftSale.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+    return {
+      status: 200,
+      message: 'Drafts retrieved successfully.',
+      data: drafts,
+    };
+  }
+
+  async getQuotation(email: string, draftId: string) {
+    const draft = await this.prisma.draftSale.findUnique({
+      where: { id: draftId },
+    });
+
+    if (!draft) {
+      throw new BadRequestException('Customer or draft not found.');
+    }
+
+    // Generate the PDF
+    const pdfBuffer =
+      await this.quotationService.generateQuotationBuffer(draft);
+
+    // Send the email with attachment
+    await this.resendMailService.sendQuotation({
+      to: email,
+      draft,
+      pdfBuffer,
+      // subject is optional
+    });
+
+    return { message: 'Quotation sent successfully' };
+  }
+
+  async deleteDraft(draftId: string) {
+    await this.prisma.draftSale.delete({
+      where: {
+        id: draftId,
+      },
+    });
+
+    return {
+      message: 'Draft deleted successfully',
     };
   }
 }

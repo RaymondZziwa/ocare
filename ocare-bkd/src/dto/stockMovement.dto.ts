@@ -52,3 +52,27 @@ export class RejectStockMovementDto {
   transferId!: string;
   reason!: string;
 }
+export class ReceivePurchaseDto {
+  supplierId: string;
+  storeId: string;
+  receivedBy: string;
+  invoiceNumber: string;
+  invoiceDate: Date;
+  deliveryNoteNumber?: string;
+  notes?: string;
+
+  items: {
+    itemId: string;
+    unitId: string;
+    quantity: number;
+
+    batch: {
+      number: string;
+      expiryDate: Date;
+      brandId: string;
+      buyingPrice: number;
+      sellingPrice: number;
+      wholesalePrice?: number;
+    };
+  }[];
+}

@@ -19,6 +19,10 @@ import { MulterModule } from '@nestjs/platform-express';
 import { ItemUploadController } from './items/itemUpload.controller';
 import { InventoryController } from './stockMovement/import.controller';
 import { InventoryService } from './stockMovement/import.service';
+import { SkuService } from 'src/utils/skuGenerator.service';
+import { SupplierController } from './suppliers/supplier.controller';
+import { SupplierService } from './suppliers/supplier.service';
+import { PurchaseService } from './stockMovement/restock.service';
 
 @Module({
   imports: [
@@ -37,6 +41,7 @@ import { InventoryService } from './stockMovement/import.service';
     MeasurementUnitController,
     StockMovementController,
     InventoryController,
+    SupplierController,
   ],
   providers: [
     BrandService,
@@ -50,6 +55,9 @@ import { InventoryService } from './stockMovement/import.service';
     CompanyService,
     StockTransferIdGeneratorService,
     InventoryService,
+    SkuService,
+    SupplierService,
+    PurchaseService,
   ],
 })
 export class InventoryModule {}

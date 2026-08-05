@@ -1,10 +1,10 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { generateEAN13 } from 'src/utils/barcodeGenerator';
 import { GenericResponse } from 'src/utils/genericResponse';
 import { ItemCategoryService } from '../itemCategories/itemCateogries.service';
 import { BrandService } from '../brands/brand.service';
-import { parseExcelForItems, ExcelImportRow } from 'src/utils/excelHelper';
+// import { ExcelImportRow } from 'src/utils/excelHelper';
+import { SkuService } from 'src/utils/skuGenerator.service';
 
 @Injectable()
 export class ItemService {
@@ -15,27 +15,23 @@ export class ItemService {
     private readonly prismaService: PrismaService, // Fallback IDs for when category/brand name is not found
     private categoriesService: ItemCategoryService,
     private brandsService: BrandService,
+    private skuService: SkuService,
   ) {}
 
   async create(data: {
     categoryId: string;
     name: string;
-    price: number; // Note: Ensure you remove this or map it if needed, it's not in the schema
-    brandId: string;
-    buyingPrice: number;
-    sellingPrice: number;
-    wholeSalePrice: number;
     alertStockLevel?: number;
     unitId: string;
     image: string;
     description: string;
+    sku: string;
     showInPos: boolean;
     variation?: any;
     sideEffects?: any;
   }): Promise<GenericResponse> {
-    // Generate barcode
-    const barcode = generateEAN13();
-
+    // Generate sku
+    const generatedSKU = await this.skuService.generateSKU();
     // Helper function to safely handle JSON strings or arrays
     const parseJsonField = (field: any) => {
       if (!field) return [];
@@ -53,13 +49,11 @@ export class ItemService {
     const {
       categoryId,
       name,
-      brandId,
-      buyingPrice,
-      sellingPrice,
       alertStockLevel,
       unitId,
       image,
       description,
+      sku,
       showInPos,
       variation,
       sideEffects,
@@ -68,21 +62,17 @@ export class ItemService {
     const item = await this.prismaService.item.create({
       data: {
         name,
-        buyingPrice,
-        sellingPrice,
-        image,
+        image: image ? image : '',
         description: description || '', // Protects against null violations
         showInPos: showInPos ?? false,
-        barcode,
         alertStockLevel: alertStockLevel || 0,
-
+        sku: sku ? sku : generatedSKU,
         // Pass clean, parsed JSON values
         variation: parseJsonField(variation),
         sideEffects: parseJsonField(sideEffects),
 
         // Use explicit relational connections to satisfy Prisma constraints
         category: { connect: { id: categoryId } },
-        brand: { connect: { id: brandId } },
         unit: { connect: { id: unitId } },
       },
     });
@@ -99,7 +89,6 @@ export class ItemService {
       include: {
         category: true,
         unit: true,
-        brand: true,
         //ItemReview: true,
       },
     });
@@ -130,7 +119,6 @@ export class ItemService {
         item: {
           include: {
             category: true,
-            brand: true,
           },
         },
         store: true,
@@ -149,6 +137,7 @@ export class ItemService {
     const store = await this.prismaService.store.findUnique({
       where: { id: storeId },
     });
+
     if (!store) {
       return {
         status: 404,
@@ -158,21 +147,84 @@ export class ItemService {
     }
 
     const items = await this.prismaService.productInventory.findMany({
-      where: { storeId },
+      where: {
+        storeId,
+        qty: {
+          gt: 0,
+        },
+      },
+
       include: {
         item: {
           include: {
             category: true,
+
+            batches: {
+              include: {
+                brand: true,
+
+                batchInventories: {
+                  where: {
+                    storeId,
+                    quantity: {
+                      gt: 0,
+                    },
+                  },
+
+                  include: {
+                    store: true,
+                  },
+                },
+              },
+              where: {
+                expiryDate: {
+                  gt: new Date(),
+                },
+              },
+            },
           },
         },
+
         store: true,
         unit: true,
       },
     });
 
+    console.log('items', items);
+
+    const formattedItems = items.map((product: any) => {
+      const batches = product.item?.batches
+        ?.map((batch: any) => {
+          const inventory = batch.batchInventories?.[0];
+
+          return {
+            batchId: batch.id,
+            batchNumber: batch.number,
+            expiryDate: batch.expiryDate,
+            brand: batch.brand?.name,
+            buyingPrice: batch.buyingPrice,
+            sellingPrice: batch.sellingPrice,
+            wholesalePrice: batch.wholesalePrice,
+            quantity: inventory?.quantity ?? 0,
+          };
+        })
+        .filter((batch: any) => batch.quantity > 0) || [];
+
+      return {
+        id: product.item?.id,
+        name: product.item?.name,
+        category: product.item?.category,
+        unit: product.unit,
+        // ProductInventory summary
+        totalQuantity: product.qty,
+        // Actual sellable batches
+        batches,
+      };
+    });
+
     return {
       status: 200,
-      data: items,
+      data: formattedItems,
       message: 'Selected store inventory fetched successfully',
     };
   }
@@ -193,16 +245,10 @@ export class ItemService {
     data: {
       categoryId?: string;
       name?: string;
-      price?: number;
-      brandId?: string;
-      buyingPrice?: number;
-      sellingPrice?: number;
       unitId?: string;
       image?: string;
       description?: string;
       showInPos?: boolean;
-      barcode?: string;
-      barcodeType?: string;
       alertStockLevel?: number;
       variation?: any[];
       sideEffects?: any[];
@@ -212,18 +258,12 @@ export class ItemService {
 
     // Only add fields that are provided
     if (data.name !== undefined) updateData.name = data.name;
-    if (data.price !== undefined) updateData.price = data.price;
-    if (data.buyingPrice !== undefined)
-      updateData.buyingPrice = data.buyingPrice;
-    if (data.sellingPrice !== undefined)
-      updateData.sellingPrice = data.sellingPrice;
+
     if (data.description !== undefined)
-      updateData.description = data.description;
+      updateData.description = data.description || '';
     if (data.showInPos !== undefined) updateData.showInPos = data.showInPos;
     if (data.image !== undefined) updateData.image = data.image;
-    if (data.barcode !== undefined) updateData.barcode = data.barcode;
-    if (data.barcodeType !== undefined)
-      updateData.barcodeType = data.barcodeType;
+
     if (data.alertStockLevel !== undefined)
       updateData.alertStockLevel = data.alertStockLevel;
     if (data.variation !== undefined) updateData.variation = data.variation;
@@ -242,19 +282,6 @@ export class ItemService {
       }
 
       updateData.categoryId = data.categoryId;
-    }
-
-    // Validate and add brandId
-    if (data.brandId) {
-      const brandExists = await this.prismaService.brand.findUnique({
-        where: { id: data.brandId },
-      });
-
-      if (!brandExists) {
-        throw new BadRequestException('Invalid brand');
-      }
-
-      updateData.brandId = data.brandId;
     }
 
     // Validate and add unitId
@@ -284,7 +311,6 @@ export class ItemService {
       data: updateData,
       include: {
         category: true,
-        brand: true,
         unit: true,
       },
     });
@@ -307,72 +333,69 @@ export class ItemService {
     };
   }
 
-  async importItemsFromExcelRows(rows: ExcelImportRow[]) {
-    const imported: any[] = [];
-    const errors: string[] = [];
+  // async importItemsFromExcelRows(rows: ExcelImportRow[]) {
+  //   const imported: any[] = [];
+  //   const errors: string[] = [];
 
-    for (const row of rows) {
-      try {
-        if (!row.productName) {
-          errors.push('Missing product name in row');
-          continue;
-        }
+  //   for (const row of rows) {
+  //     try {
+  //       if (!row.productName) {
+  //         errors.push('Missing product name in row');
+  //         continue;
+  //       }
 
-        let categoryId = this.DEFAULT_CATEGORY_ID;
-        if (row.categoryName) {
-          const category = await this.categoriesService.findByName(
-            row.categoryName,
-          );
-          if (category) {
-            categoryId = category.id;
-          } else {
-            errors.push(
-              `Category "${row.categoryName}" not found for "${row.productName}" – using fallback`,
-            );
-          }
-        }
+  //       let categoryId = this.DEFAULT_CATEGORY_ID;
+  //       if (row.categoryName) {
+  //         const category = await this.categoriesService.findByName(
+  //           row.categoryName,
+  //         );
+  //         if (category) {
+  //           categoryId = category.id;
+  //         } else {
+  //           errors.push(
+  //             `Category "${row.categoryName}" not found for "${row.productName}" – using fallback`,
+  //           );
+  //         }
+  //       }
 
-        let brandId = this.DEFAULT_BRAND_ID;
-        if (row.brandName) {
-          const brand = await this.brandsService.findByName(row.brandName);
-          if (brand) {
-            brandId = brand.id;
-          } else {
-            errors.push(
-              `Brand "${row.brandName}" not found for "${row.productName}" – using fallback`,
-            );
-          }
-        }
+  //       let brandId = this.DEFAULT_BRAND_ID;
+  //       if (row.brandName) {
+  //         const brand = await this.brandsService.findByName(row.brandName);
+  //         if (brand) {
+  //           brandId = brand.id;
+  //         } else {
+  //           errors.push(
+  //             `Brand "${row.brandName}" not found for "${row.productName}" – using fallback`,
+  //           );
+  //         }
+  //       }
+  //       const generatedSKU = await this.skuService.generateSKU();
+  //       const created = await this.prismaService.item.create({
+  //         data: {
+  //           name: row.productName,
+  //           description: '',
+  //           categoryId,
+  //           sku: row.sku ? row.sku : generatedSKU,
+  //           unitId: this.DEFAULT_UNIT_ID,
+  //           alertStockLevel: row.alertStockLevel ?? 0,
+  //           showInPos: true,
+  //           image: '',
+  //           sideEffects: '',
+  //           variation: '',
+  //         },
+  //       });
 
-        const created = await this.prismaService.item.create({
-          data: {
-            name: row.productName,
-            description: '',
-            categoryId,
-            brandId,
-            unitId: this.DEFAULT_UNIT_ID,
-            buyingPrice: row.buyingPrice,
-            sellingPrice: row.sellingPrice,
-            alertStockLevel: row.alertStockLevel ?? 0,
-            showInPos: true,
-            image: '',
-            barcode: '',
-            sideEffects: '',
-            variation: '',
-          },
-        });
+  //       imported.push(created);
+  //     } catch (error: any) {
+  //       errors.push(`Error importing "${row.productName}": ${error.message}`);
+  //     }
+  //   }
 
-        imported.push(created);
-      } catch (error: any) {
-        errors.push(`Error importing "${row.productName}": ${error.message}`);
-      }
-    }
-
-    return {
-      importedCount: imported.length,
-      imported,
-      errors,
-      totalRows: rows.length,
-    };
-  }
+  //   return {
+  //     importedCount: imported.length,
+  //     imported,
+  //     errors,
+  //     totalRows: rows.length,
+  //   };
+  // }
 }

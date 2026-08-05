@@ -24,15 +24,11 @@ export class ItemController {
     data: {
       categoryId: string;
       name: string;
-      price: number;
-      brandId: string;
-      buyingPrice: number;
+      sku: string;
       image: string;
       description: string;
       alertStockLevel?: number;
       unitId: string;
-      sellingPrice: number;
-      wholeSalePrice: number;
       showInPos: boolean;
       variation?: any[];
       sideEffects?: any[];
@@ -68,16 +64,11 @@ export class ItemController {
     data: {
       categoryId?: string;
       name?: string;
-      price?: number;
       brandId?: string;
-      buyingPrice?: number;
-      sellingPrice?: number;
       unitId?: string;
       image?: string;
       description?: string;
       showInPos?: boolean;
-      barcode?: string;
-      barcodeType?: string;
       alertStockLevel?: number;
       variation?: any[];
       sideEffects?: any[];

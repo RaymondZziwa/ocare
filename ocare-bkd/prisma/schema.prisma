@@ -4,9 +4,10 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client-js"
-  moduleFormat    = "cjs"
+  provider     = "prisma-client-js"
+  moduleFormat = "cjs"
 }
+
 datasource db {
   provider = "mysql"
 }
@@ -19,7 +20,7 @@ enum SaleType {
 
 enum SUPPLIER_TYPE {
   INDIVIDUAL
-  BUSINESSS
+  BUSINESS
 }
 
 enum Gender {
@@ -34,6 +35,7 @@ enum AuthProvider {
   Mobile
   In_Shop
 }
+
 
 enum ChannelType {
   BANK_TRANSFER
@@ -114,6 +116,12 @@ enum PaymentStatus {
   PARTIALLY_PAID
   UNPAID
 }
+
+enum SaleMode {
+  Retail
+  Wholesale
+}
+
 model Company {
   id          String   @id @default(uuid())
   name        String
@@ -135,6 +143,7 @@ model Company {
   @@index([email])
   @@index([name])
 }
+
 model Branch {
   id        String   @id @default(uuid())
   name      String
@@ -142,22 +151,22 @@ model Branch {
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 
-  Store         Store[]
+  Store          Store[]
   // branchExpense branchExpense[]
+  employees      Employee[]
+  branchExpenses branchExpense[]
 
   @@index([name, location])
   @@map("branches")
-  employees Employee[]
-  branchExpenses branchExpense[]
 }
 
 model Store {
-  id                  String     @id @default(uuid())
+  id                  String  @id @default(uuid())
   name                String
   branchId            String
-  isForSales          Boolean    @default(false)
-  isForAppSales       Boolean    @default(false)
-  branch              Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  isForSales          Boolean @default(false)
+  isForAppSales       Boolean @default(false)
+  branch              Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
   authorizedPersonnel Json? // Consider normalizing if frequently queried
 
   updatedAt DateTime @updatedAt
@@ -169,16 +178,19 @@ model Store {
   // fromInventoryRecords InventoryRecord[]  @relation("FromStore")
   // toInventoryRecords   InventoryRecord[]  @relation("ToStore")
   // Supply               Supply[]
+  fromInventoryRecords InventoryRecord[]  @relation("FromStore")
+  toInventoryRecords   InventoryRecord[]  @relation("ToStore")
+  productInventories   ProductInventory[]
+  sales                Sale[]
+  batchInventories     BatchInventory[]
 
   @@index([branchId])
   @@index([name])
   @@map("stores") // Explicit table name
-  fromInventoryRecords InventoryRecord[]  @relation("FromStore")
-  toInventoryRecords   InventoryRecord[]  @relation("ToStore")
-  productInventories ProductInventory[]
-  sales Sale[]
-  supplies Supply[]
+  purchases Purchase[]
+  shopSales ShopSale[]
 }
+
 model Unit {
   id        String   @id @default(uuid())
   name      String
@@ -187,13 +199,14 @@ model Unit {
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 
-  Item             Item[]
+  Item               Item[]
+  inventoryRecords   InventoryRecord[]
+  productInventories ProductInventory[]
 
   @@unique([name])
   @@map("units")
-  inventoryRecords InventoryRecord[]
-  productInventories ProductInventory[]
-  supplies Supply[]
+  purchaseItems PurchaseItem[]
+  saleItems SaleItem[]
 }
 
 model Brand {
@@ -201,8 +214,10 @@ model Brand {
   name      String
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
-  Item      Item[]
+
+  batches Batch[]
 }
+
 model ItemCategory {
   id          String   @id @default(uuid())
   name        String   @unique
@@ -218,42 +233,97 @@ model ItemCategory {
 
 model Batch {
   id String @id @default(uuid())
-  number String
+
+  number     String
   expiryDate DateTime
-  updatedAt   DateTime @updatedAt
-  createdAt   DateTime @default(now())
+
+  itemId String
+  item   Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  brandId String
+  brand   Brand  @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  barcodeType String?
+  barcode     String?
+
+  manufactureDate DateTime?
+
+  buyingPrice Decimal @db.Decimal(10, 2)
+
+  sellingPrice Decimal @db.Decimal(10, 2)
+
+  wholesalePrice Decimal @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inventoryRecords InventoryRecord[]
+  batchInventories BatchInventory[]
+
+  @@unique([itemId, number])
+  @@index([itemId])
+  @@index([expiryDate])
+  @@index([barcode])
+  purchaseItems PurchaseItem[]
+  saleItems SaleItem[]
 }
+
+model BatchInventory {
+  id String @id @default(uuid())
+
+  batchId String
+  batch   Batch  @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  quantity Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([batchId, storeId])
+  @@index([storeId])
+}
+
+model SKUCounter {
+  id        String   @id @default(uuid())
+
+  prefix    String   @unique
+  current   Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Item {
-  id              String        @id @default(uuid())
+  id              String       @id @default(uuid())
   categoryId      String
   category        ItemCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  brandId         String
-  brand           Brand         @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  barcodeType     String?
   alertStockLevel Float
-  description     String      @db.Text
-  showInPos       Boolean       @default(false)
+  description     String       @db.Text
+  showInPos       Boolean      @default(false)
   name            String
-  buyingPrice     Decimal       @db.Decimal(10, 2)
-  sellingPrice    Decimal       @db.Decimal(10, 2)
-  wholeSalePrice    Decimal       @db.Decimal(10, 2) @default(0.0)
-  barcode         String?
   unitId          String
   unit            Unit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  sku String 
   image           String
   sideEffects     Json?
   variation       Json? // strengths of the medicine if any, e.g., 500mg, 250mg, etc.
-  updatedAt       DateTime      @updatedAt
-  createdAt       DateTime      @default(now())
+  updatedAt       DateTime     @updatedAt
+  createdAt       DateTime     @default(now())
+
+  inventoryRecords   InventoryRecord[]
+  productInventories ProductInventory[]
+  batches            Batch[]
 
   @@index([categoryId])
   @@index([name])
-  @@index([barcode])
   @@index([createdAt])
+  @@unique([sku])
   @@map("items")
-  inventoryRecords InventoryRecord[]
-  productInventories ProductInventory[]
-  supplies Supply[]
+  purchaseItems PurchaseItem[]
+  saleItems SaleItem[]
 }
 
 model ProductInventory {
@@ -277,6 +347,8 @@ model ProductInventory {
 // Inventory records with optimized date queries
 model InventoryRecord {
   id       String                  @id @default(uuid())
+  supplierId String?
+  supplier Supplier?  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
   category InventoryRecordCategory
   itemId   String
   item     Item                    @relation(fields: [itemId], references: [id], onDelete: Cascade)
@@ -286,7 +358,9 @@ model InventoryRecord {
 
   toStoreId String?
   toStore   Store?  @relation("ToStore", fields: [toStoreId], references: [id], onDelete: Cascade)
+  batchId   String?
 
+  batch             Batch?              @relation(fields: [batchId], references: [id])
   initiatedQty      Float?
   qty               Float
   remainingQuantity Float?
@@ -315,33 +389,34 @@ model InventoryRecord {
 }
 
 model Client {
-  id              String    @id @default(uuid())
+  id              String       @id @default(uuid())
   provider        AuthProvider
   firstName       String
   lastName        String
   fullName        String
   gender          Gender?
-  phone           String? 
-  email           String  @unique
+  phone           String?
+  email           String       @unique
   address         String?
   password        String
-  isEmailVerified Boolean   @default(false)
-  isPhoneVerified Boolean   @default(false)
-  updatedAt       DateTime  @updatedAt
-  createdAt       DateTime  @default(now())
-  addresses Address[]
+  isEmailVerified Boolean      @default(false)
+  isPhoneVerified Boolean      @default(false)
+  updatedAt       DateTime     @updatedAt
+  createdAt       DateTime     @default(now())
+  addresses       Address[]
   // Sales              Sale[]
   // ClientPrescription ClientPrescription[]
   // ClientOtp          ClientOtp[]
   // ItemReview         ItemReview[]
+  inquiries       Inquiry[]
+  clientOtps      ClientOtp[]
+  sales           Sale[]
 
   @@index([firstName, lastName])
   @@index([phone])
   @@index([createdAt])
   @@map("clients")
-  inquiries Inquiry[]
-  clientOtps ClientOtp[]
-  sales Sale[]
+  shopSales ShopSale[]
 }
 
 model ClientOtp {
@@ -355,22 +430,23 @@ model ClientOtp {
   @@index([clientId, createdAt])
   @@map("client_otps")
 }
+
 model Address {
-  id              String    @id @default(uuid())
-  clientId String
-  client          Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  label String?
-  town String
-  village String
-  landmark String?
-  isDefault Boolean @default(false)
-  updatedAt       DateTime  @updatedAt
-  createdAt       DateTime  @default(now())
+  id        String   @id @default(uuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  label     String?
+  town      String
+  village   String
+  landmark  String?
+  isDefault Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
 }
 
 //finance models
 model WithdrawChannel {
-  id                      String    @id @default(uuid())
+  id                      String                    @id @default(uuid())
   type                    ChannelType
   name                    String
   phoneNumber             String?
@@ -385,7 +461,7 @@ model WithdrawChannel {
 }
 
 model ChannelVerificationCode {
-  id         String    @id @default(uuid())
+  id        String          @id @default(uuid())
   channelId String
   channel   WithdrawChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
   code      String
@@ -396,7 +472,7 @@ model ChannelVerificationCode {
 }
 
 model Wallet {
-  id               String    @id @default(uuid())
+  id              String            @id @default(uuid())
   name            String
   purpose         String?
   balance         Decimal           @default(0) @db.Decimal(10, 2)
@@ -411,7 +487,7 @@ model Wallet {
 }
 
 model Withdraw {
-  id         String    @id @default(uuid())
+  id        String         @id @default(uuid())
   amount    Decimal        @db.Decimal(10, 2)
   walletId  String
   wallet    Wallet         @relation(fields: [walletId], references: [id])
@@ -419,8 +495,9 @@ model Withdraw {
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 }
+
 model WithdrawHistory {
-  id                        String    @id @default(uuid())
+  id                       String          @id @default(uuid())
   amount                   Decimal         @db.Decimal(10, 2)
   walletId                 String
   wallet                   Wallet          @relation(fields: [walletId], references: [id])
@@ -433,8 +510,9 @@ model WithdrawHistory {
   createdAt                DateTime        @default(now())
   updatedAt                DateTime        @updatedAt
 }
+
 model TransactionHistory {
-  id              String    @id @default(uuid())
+  id              String          @id @default(uuid())
   type            TransactionType
   amount          Decimal         @db.Decimal(10, 2)
   channelId       String
@@ -456,44 +534,45 @@ enum InquiryStatus {
   PENDING
   SOLVED
 }
+
 model Inquiry {
-  id              String    @id @default(uuid())
-  clientId String
-  client         Client @relation(fields: [clientId], references: [id])
-  subject String @db.Text
-  message String @db.Text
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  id        String   @id @default(uuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id])
+  subject   String   @db.Text
+  message   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   inquiryResponses InquiryResponse[]
 }
 
 model InquiryResponse {
-  id              String    @id @default(uuid())
-  inquiryId String
-  inquiry         Inquiry @relation(fields: [inquiryId], references: [id])
+  id         String   @id @default(uuid())
+  inquiryId  String
+  inquiry    Inquiry  @relation(fields: [inquiryId], references: [id])
   employeeId String //--the person responding
-  subject String @db.Text
-  message String @db.Text
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  subject    String   @db.Text
+  message    String   @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 //hr
 model Employee {
-  id                    String      @id @default(uuid())
-  firstName             String
-  lastName              String
-  gender                Gender
-  email                 String      @unique
-  tel                   String      @unique
-  password              String
-  branchId              String
-  branch                Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  hasAccess             Boolean     @default(false)
-  isActive              Boolean     @default(true)
-  updatedAt             DateTime    @updatedAt
-  createdAt             DateTime    @default(now())
+  id        String   @id @default(uuid())
+  firstName String
+  lastName  String
+  gender    Gender
+  email     String   @unique
+  tel       String   @unique
+  password  String
+  branchId  String
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  hasAccess Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
 
   // Relations
   //EmailVerification             EmailVerification[]
@@ -502,16 +581,16 @@ model Employee {
   // Supply                        Supply[]
   // SupplyPayments                SupplyPayments[]
   // SalePaymentTransactionHistory SalePaymentTransactionHistory[]
+  inventoryRecords InventoryRecord[]
+  branchExpenses   branchExpense[]
+  salePayments     SalePayment[]
+  sales            Sale[]
 
   @@index([email, isActive])
   @@index([createdAt])
   @@map("employees")
-  inventoryRecords InventoryRecord[]
-  branchExpenses branchExpense[]
-  salePayments SalePayment[]
-  sales Sale[]
-  supplyPayments SupplyPayments[]
-  supplies Supply[]
+  purchases Purchase[]
+  shopSales ShopSale[]
 }
 
 model branchExpense {
@@ -533,28 +612,28 @@ model branchExpense {
   @@map("branch_expenses")
 }
 
-
 //sale
 model Sale {
-  id             String         @id @default(uuid())
-  type           SaleType       @default(In_shop)
-  clientId       String
-  client         Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  items          Json // Array of CartItemDto - consider normalized table for large systems
-  servedBy       String?
-  employee       Employee?      @relation(fields: [servedBy], references: [id], onDelete: Cascade)
-  storeId        String
-  store          Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  saleStatus     SaleStatus     @default(PENDING)
-  salePaymentId   String @unique
-  salePayment    SalePayment         @relation(fields: [salePaymentId], references: [id], onDelete: Cascade)
-  status         PaymentStatus @default(FULLY_PAID)
-  total          Decimal        @db.Decimal(10, 2)
-  paymentMethod   String
-  notes          String?
-  updatedAt      DateTime       @updatedAt
-  createdAt      DateTime       @default(now())
-  timeLine       SaleTimeLine[]
+  id            String         @id @default(uuid())
+  type          SaleType       @default(In_shop)
+  mode          SaleMode       @default(Retail)
+  clientId      String
+  client        Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  items         Json // Array of CartItemDto - consider normalized table for large systems
+  servedBy      String?
+  employee      Employee?      @relation(fields: [servedBy], references: [id], onDelete: Cascade)
+  storeId       String
+  store         Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  saleStatus    SaleStatus     @default(PENDING)
+  salePaymentId String         @unique
+  salePayment   SalePayment    @relation(fields: [salePaymentId], references: [id], onDelete: Cascade)
+  status        PaymentStatus  @default(FULLY_PAID)
+  total         Decimal        @db.Decimal(10, 2)
+  paymentMethod String
+  notes         String?
+  updatedAt     DateTime       @updatedAt
+  createdAt     DateTime       @default(now())
+  timeLine      SaleTimeLine[]
 
   // Comprehensive indexing for fast queries
   @@index([storeId, createdAt])
@@ -564,6 +643,7 @@ model Sale {
   @@index([createdAt]) // For date range queries
   @@index([total])
   @@map("sales")
+  saleItems SaleItem[]
 }
 
 model SaleTimeLine {
@@ -574,12 +654,13 @@ model SaleTimeLine {
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 }
+
 model SalePayment {
   id String @id @default(uuid())
 
   // Transaction identification
-  transaction_uuid        String?  @unique
-  transaction_reference   String?  @unique
+  transaction_uuid        String? @unique
+  transaction_reference   String? @unique
   provider_transaction_id String? @unique
 
   // Amount information
@@ -588,9 +669,9 @@ model SalePayment {
   currency         String  @default("UGX")
 
   // Payment provider details
-  provider       String? // "mtn", "airtel", "card payments"
-  provider_mode  String? // "mtnuganda", "airteluganda", "card paymentsuganda"
-  phone_number   String?
+  provider      String? // "mtn", "airtel", "card payments"
+  provider_mode String? // "mtnuganda", "airteluganda", "card paymentsuganda"
+  phone_number  String?
 
   // Transaction status
   status     WithdrawStatus @default(PENDING)
@@ -613,6 +694,7 @@ model SalePayment {
   transaction_completed_at DateTime? // From webhook updated_at
   created_at               DateTime  @default(now())
   updated_at               DateTime  @updatedAt
+  sales                    Sale[]
 
   // Indexes for better query performance
   @@index([transaction_uuid])
@@ -622,66 +704,197 @@ model SalePayment {
   @@index([phone_number])
   @@index([created_at])
   @@map("sale_payment_transaction_history")
-  sales Sale[]
+  shopSales ShopSale[]
 }
 
 //supplier
 model Supplier {
   id        String        @id @default(uuid())
-  firstName String
-  lastName  String
-  email     String?       @unique
+  firstName String?
+  lastName  String?
+  businessName String?
+  email     String        @unique
   contact   String        @unique
   address   String?
   type      SUPPLIER_TYPE @default(INDIVIDUAL)
   updatedAt DateTime      @updatedAt
   createdAt DateTime      @default(now())
-  Supply    Supply[]
 
   @@index([firstName, lastName])
   @@index([contact])
   @@index([createdAt])
+  inventoryRecords InventoryRecord[]
+  purchases Purchase[]
 }
 
-model Supply {
-  id                 String             @id @default(uuid())
-  itemId             String
-  item               Item               @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  supplierId         String
-  supplier           Supplier           @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  qty                Float
-  unitId             String
-  uom                Unit               @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  value              Decimal            @db.Decimal(10, 2)
-  balance            Decimal            @db.Decimal(10, 2)
-  recievedBy         String
-  employee           Employee           @relation(fields: [recievedBy], references: [id], onDelete: Cascade)
-  paymentStatus      PaymentStatus @default(UNPAID)
-  proofImage         String?
-  destinationStoreId String
-  destinationStore   Store              @relation(fields: [destinationStoreId], references: [id], onDelete: Cascade)
-  updatedAt          DateTime           @updatedAt
-  createdAt          DateTime           @default(now())
-  SupplyPayments     SupplyPayments[]
+model Purchase {
+  id String @id @default(uuid())
+
+  supplierId String
+  supplier Supplier @relation(fields: [supplierId], references: [id])
+
+  invoiceNumber String
+  invoiceDate DateTime
+
+  storeId String
+  store Store @relation(fields: [storeId], references: [id])
+
+  receivedBy String
+  employee Employee @relation(fields: [receivedBy], references: [id])
+
+  notes String?
+
+  items PurchaseItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
 
   @@index([supplierId])
+  @@index([storeId])
+  @@index([invoiceDate])
+  @@index([invoiceNumber])
+}
+
+model PurchaseItem {
+
+  id String @id @default(uuid())
+
+
+  purchaseId String
+  purchase Purchase @relation(fields:[purchaseId], references:[id], onDelete:Cascade)
+
+
+  itemId String
+  item Item @relation(fields:[itemId], references:[id])
+
+
+  batchId String
+  batch Batch @relation( fields:[batchId],references:[id])
+
+
+  unitId String
+  unit Unit @relation( fields:[unitId],references:[id])
+
+
+  quantity Float
+
+
+  buyingPrice Decimal @db.Decimal(10,2)
+
+
+  sellingPrice Decimal @db.Decimal(10,2)
+
+
+  wholesalePrice Decimal?
+  
+
+  createdAt DateTime @default(now())
+
+
+  @@index([purchaseId])
+  @@index([itemId])
+  @@index([batchId])
+
+}
+
+model ShopSale {
+  id String @id @default(uuid())
+
+  saleNumber String @unique
+
+  customerId String?
+  customer Client? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  storeId String
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  servedBy String
+  employee Employee @relation(fields: [servedBy], references: [id], onDelete: Cascade)
+
+  paymentMethod String
+
+  status SaleStatus @default(PENDING)
+
+  subtotal Decimal @db.Decimal(12,2)
+
+  serviceCharge Decimal @db.Decimal(12,2) @default(0)
+
+  discount Decimal @db.Decimal(12,2) @default(0)
+
+  total Decimal @db.Decimal(12,2)
+
+  notes String?
+
+  salePaymentId String?
+  salePayment SalePayment? @relation(fields:[salePaymentId], references:[id])
+
+  items SaleItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([storeId])
+  @@index([servedBy])
+  @@index([customerId])
+  @@index([status])
   @@index([createdAt])
 }
 
-model SupplyPayments {
-  id                String             @id @default(uuid())
-  supplyId          String
-  supply            Supply             @relation(fields: [supplyId], references: [id], onDelete: Cascade)
-  bank              String?
-  chequeNumber      String?
-  chequeBankingDate DateTime?
-  paymentType       PaymentType
-  barterItemName    String?
-  amount            Decimal            @db.Decimal(10, 2)
-  paidBy            String
-  employee          Employee           @relation(fields: [paidBy], references: [id], onDelete: Cascade)
-  paymentStatus     PaymentStatus
-  proofImage        String?
-  updatedAt         DateTime           @updatedAt
-  createdAt         DateTime           @default(now())
+model SaleItem {
+
+  id String @id @default(uuid())
+
+  saleId String
+  sale Sale @relation(fields:[saleId], references:[id], onDelete:Cascade)
+
+  itemId String
+  item Item @relation(fields:[itemId], references:[id], onDelete:Cascade)
+
+  batchId String
+  batch Batch @relation(fields:[batchId], references:[id])
+
+  unitId String
+  unit Unit @relation(fields:[unitId], references:[id])
+
+  quantity Float
+
+  saleType SaleType
+
+  unitPrice Decimal @db.Decimal(10,2)
+
+  discount Decimal @db.Decimal(10,2) @default(0)
+
+  total Decimal @db.Decimal(12,2)
+
+  createdAt DateTime @default(now())
+
+  @@index([saleId])
+  @@index([itemId])
+  @@index([batchId])
+  shopSales ShopSale[]
+}
+
+model DraftSale {
+  id String @id @default(uuid())
+
+  customerId String?
+
+  cart Json
+
+  paymentMethod String?
+
+  amountPaid Decimal? @db.Decimal(12,2)
+
+  notes String?
+
+  phoneNumber String?
+
+  paymentStatus PaymentStatus?
+
+  isCompleted Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
 }

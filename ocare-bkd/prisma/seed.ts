@@ -1,7 +1,5 @@
 import { PrismaClient } from '@prisma/client';
 import { defaultBranches } from './seed/branches';
-import { permissions } from './seed/permissions';
-import { defaultRoles } from './seed/roles';
 import { defaultUser } from './seed/super_user';
 import { defaultCompany } from './seed/defaultCompany';
 import { unitsOfMeasurement } from './seed/unitsOfMeasurement';
@@ -123,7 +121,7 @@ async function seedUsers() {
 async function main() {
   await seedBranches();
   //await seedPermissions();
-  // await seedRoles();
+  //await seedRoles();
   await seedUsers();
   await seedCompany();
   await seedUnits();

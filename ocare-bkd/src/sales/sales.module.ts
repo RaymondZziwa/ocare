@@ -12,6 +12,7 @@ import { VerificationService } from 'src/web-app/auth/verification.service';
 import { JwtService } from '@nestjs/jwt';
 import { ClientModule } from './customers/customer.module';
 import { AppOrdersModule } from './orders/orders.module';
+import { QuotationService } from 'src/web-app/orders/quotationGeneration.service';
 
 @Module({
   imports: [ConfigModule, HttpModule, ClientModule, AppOrdersModule],
@@ -24,6 +25,7 @@ import { AppOrdersModule } from './orders/orders.module';
     ReceiptService,
     VerificationService,
     JwtService,
+    QuotationService,
   ],
 })
 export class SalesModule {}
