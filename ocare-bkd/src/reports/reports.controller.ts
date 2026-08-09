@@ -285,4 +285,26 @@ export class ReportsController {
       endDate,
     });
   }
+
+  // Purchase Report
+  @Get('purchases')
+  async getPurchaseReport(
+    @Query('storeId') storeId?: string,
+    @Query('supplierId') supplierId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return await this.reportService.purchaseReport(
+      storeId,
+      supplierId,
+      startDate,
+      endDate,
+    );
+  }
+
+  // Item Batch Report
+  @Get('item-batches/:itemId')
+  async getItemBatchReport(@Param('itemId') itemId: string) {
+    return await this.reportService.itemBatchReport(itemId);
+  }
 }

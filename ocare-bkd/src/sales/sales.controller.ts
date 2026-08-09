@@ -12,15 +12,26 @@ import {
 import { SalesService } from './sales.service';
 import { CreateSaleDto } from 'src/dto/pos.dto';
 import { CreateDraftSaleDto } from 'src/dto/draftSale.dto';
+import { SystemPosService } from './systemPos.service';
+import { CreateSystemSaleDto } from 'src/dto/systemSale.dto';
 
 @Controller('api/sales')
 export class SalesController {
-  constructor(private readonly salesService: SalesService) {}
+  constructor(
+    private readonly salesService: SalesService,
+    private readonly systemPosService: SystemPosService,
+  ) {}
 
   @Post('create')
   @HttpCode(HttpStatus.OK) // matches the service's returned status 200
   async create(@Body() createSaleDto: CreateSaleDto) {
     return this.salesService.create(createSaleDto);
+  }
+
+  @Post('system-sale')
+  @HttpCode(HttpStatus.OK) // matches the service's returned status 200
+  async createSystemSale(@Body() createSaleDto:  CreateSystemSaleDto) {
+    return this.systemPosService.saveSale(createSaleDto);
   }
 
   @Post('save-draft')
@@ -64,4 +75,3 @@ export class SalesController {
     return this.salesService.remove(id);
   }
 }
-

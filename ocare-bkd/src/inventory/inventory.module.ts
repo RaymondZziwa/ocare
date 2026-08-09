@@ -23,6 +23,7 @@ import { SkuService } from 'src/utils/skuGenerator.service';
 import { SupplierController } from './suppliers/supplier.controller';
 import { SupplierService } from './suppliers/supplier.service';
 import { PurchaseService } from './stockMovement/restock.service';
+import { StockAdjustmentService } from './stockMovement/adjust.service';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { PurchaseService } from './stockMovement/restock.service';
     SkuService,
     SupplierService,
     PurchaseService,
+    StockAdjustmentService,
   ],
 })
 export class InventoryModule {}

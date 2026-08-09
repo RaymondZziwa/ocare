@@ -1,10 +1,10 @@
 export const defaultCompany = [
   {
     name: 'Ocare Ltd',
-    email: 'pbms@pbms.com',
+    email: 'ocare@ocare.com',
     tel1: '07000000000',
     tel2: '07000000000',
-    address: 'Equatorial Mall',
+    address: 'Kisasi',
     logo: '',
     website: 'www.company.com',
     tinNumber: '7532965972',

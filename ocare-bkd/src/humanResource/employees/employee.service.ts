@@ -38,6 +38,7 @@ export class EmployeeService {
           hasAccess: dto.hasAccess ?? false,
           isActive: dto.isActive ?? true,
           branchId: dto.branchId,
+          roleId: dto.roleId,
         },
       });
       return {

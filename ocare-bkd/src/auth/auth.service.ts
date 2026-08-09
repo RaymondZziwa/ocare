@@ -48,6 +48,7 @@ export class AuthService {
           where: { email: identifier },
           include: {
             branch: { select: { id: true, name: true } },
+            role: { select: { id: true, name: true, permissions: true } },
           },
         });
       } else {
@@ -55,7 +56,7 @@ export class AuthService {
           where: { tel: identifier },
           include: {
             branch: { select: { id: true, name: true } },
-            //role: { select: { id: true, name: true, permissions: true } },
+            role: { select: { id: true, name: true, permissions: true } },
           },
         });
       }
@@ -107,13 +108,13 @@ export class AuthService {
         isActive: user.isActive,
         updatedAt: user.updatedAt,
         createdAt: user.createdAt,
-        // role: user.role
-        //   ? {
-        //       id: user.role.id,
-        //       name: user.role.name,
-        //       permissions: user.role.permissions,
-        //     }
-        //   : null,
+        role: user.role
+          ? {
+              id: user.role.id,
+              name: user.role.name,
+              permissions: user.role.permissions,
+            }
+          : null,
         branch: user.branch
           ? {
               id: user.branch.id,

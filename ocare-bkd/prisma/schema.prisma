@@ -122,6 +122,32 @@ enum SaleMode {
   Wholesale
 }
 
+model Permission {
+  id        String   @id @default(uuid())
+  module    String
+  name      String
+  value     String   @unique
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  Role Role[]
+
+  @@index([module, name])
+  @@map("permissions")
+}
+
+model Role {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  permissions Permission[]
+  updatedAt   DateTime     @updatedAt
+  createdAt   DateTime     @default(now())
+
+  Employee Employee[]
+
+  @@map("roles")
+}
+
 model Company {
   id          String   @id @default(uuid())
   name        String
@@ -303,6 +329,7 @@ model Item {
   alertStockLevel Float
   description     String       @db.Text
   showInPos       Boolean      @default(false)
+  sellingPrice  Decimal        @db.Decimal(10, 2) @default(0.0)
   name            String
   unitId          String
   unit            Unit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
@@ -561,6 +588,8 @@ model InquiryResponse {
 //hr
 model Employee {
   id        String   @id @default(uuid())
+  roleId    String
+  role      Role    @relation(fields: [roleId], references: [id])
   firstName String
   lastName  String
   gender    Gender
@@ -643,7 +672,6 @@ model Sale {
   @@index([createdAt]) // For date range queries
   @@index([total])
   @@map("sales")
-  saleItems SaleItem[]
 }
 
 model SaleTimeLine {
@@ -846,7 +874,7 @@ model SaleItem {
   id String @id @default(uuid())
 
   saleId String
-  sale Sale @relation(fields:[saleId], references:[id], onDelete:Cascade)
+  sale ShopSale @relation(fields:[saleId], references:[id], onDelete:Cascade)
 
   itemId String
   item Item @relation(fields:[itemId], references:[id], onDelete:Cascade)
@@ -860,6 +888,7 @@ model SaleItem {
   quantity Float
 
   saleType SaleType
+  mode SaleMode
 
   unitPrice Decimal @db.Decimal(10,2)
 
@@ -872,7 +901,6 @@ model SaleItem {
   @@index([saleId])
   @@index([itemId])
   @@index([batchId])
-  shopSales ShopSale[]
 }
 
 model DraftSale {

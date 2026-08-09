@@ -4,43 +4,38 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsNumber,
-  IsUUID,
 } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
 
 export class CreateDepartmentDto {
   @IsNotEmpty()
   @IsString()
-  name: string;
-
-
+  name!: string;
 }
 
 export class CreateEmployeeDto {
   @IsNotEmpty()
   @IsString()
-  firstName: string;
+  firstName!: string;
 
   @IsNotEmpty()
   @IsString()
-  lastName: string;
+  lastName!: string;
 
   @IsNotEmpty()
   @IsString()
-  gender: string;
+  gender!: string;
 
   @IsEmail()
-  email: string;
+  email!: string;
 
   @IsNotEmpty()
   @IsString()
-  tel: string;
+  tel!: string;
 
   @IsNotEmpty()
   @IsString()
-  password: string;
-
+  password!: string;
 
   @IsOptional()
   @IsBoolean()
@@ -55,6 +50,8 @@ export class CreateEmployeeDto {
   profileImage?: string;
 
   branchId!: string;
+
+  roleId!: string;
 }
 
 export class employeeProfileUpdateDto {

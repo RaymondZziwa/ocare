@@ -53,15 +53,15 @@ export class RejectStockMovementDto {
   reason!: string;
 }
 export class ReceivePurchaseDto {
-  supplierId: string;
-  storeId: string;
-  receivedBy: string;
-  invoiceNumber: string;
-  invoiceDate: Date;
+  supplierId!: string;
+  storeId!: string;
+  receivedBy!: string;
+  invoiceNumber!: string;
+  invoiceDate!: Date;
   deliveryNoteNumber?: string;
   notes?: string;
 
-  items: {
+  items!: {
     itemId: string;
     unitId: string;
     quantity: number;
@@ -73,6 +73,21 @@ export class ReceivePurchaseDto {
       buyingPrice: number;
       sellingPrice: number;
       wholesalePrice?: number;
+    };
+  }[];
+}
+
+export class AdjustStockDto {
+  storeId!: string;
+  adjustedBy!: string;
+  notes?: string;
+
+  items!: {
+    itemId: string;
+    quantity: number;
+
+    batch: {
+      number: string;
     };
   }[];
 }

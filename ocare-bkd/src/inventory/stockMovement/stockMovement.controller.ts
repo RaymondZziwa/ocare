@@ -8,6 +8,7 @@ import {
   Param,
 } from '@nestjs/common';
 import {
+  AdjustStockDto,
   ConfirmStockMovementDto,
   CreateStockMovementDto,
   ReceivePurchaseDto,
@@ -18,12 +19,14 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { join, extname } from 'path';
 import { PurchaseService } from './restock.service';
+import { StockAdjustmentService } from './adjust.service';
 
 @Controller('api/stock-movement')
 export class StockMovementController {
   constructor(
     private readonly stockMovementService: StockMovementService,
     private readonly purchaseService: PurchaseService,
+    private readonly adjustmentService: StockAdjustmentService,
     //private readonly DeliveryNoteService: DeliveryNoteService,
   ) {}
 
@@ -60,6 +63,16 @@ export class StockMovementController {
   @Post('restock')
   async restock(@Body() dto: ReceivePurchaseDto) {
     return this.purchaseService.receivePurchase(dto);
+  }
+
+  @Post('adjust')
+  async adjust(@Body() dto: AdjustStockDto) {
+    return this.adjustmentService.adjustStock(dto);
+  }
+
+  @Get('purchases/all')
+  async fetchAllPurchases() {
+    return this.purchaseService.getAllPurchases();
   }
 
   @Post('confirm-transfer')

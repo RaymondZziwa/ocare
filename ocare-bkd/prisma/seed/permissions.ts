@@ -17,11 +17,11 @@ export const permissions = [
     value: 'register_and_modify_employees',
     module: 'Human Resource',
   },
-  {
-    name: 'Assess Payroll',
-    value: 'assess_payroll',
-    module: 'Human Resource',
-  },
+  // {
+  //   name: 'Assess Payroll',
+  //   value: 'assess_payroll',
+  //   module: 'Human Resource',
+  // },
   // {
   //   name: 'Assess Leave Applications',
   //   value: 'assess_leave_applications',

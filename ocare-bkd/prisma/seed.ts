@@ -4,6 +4,8 @@ import { defaultUser } from './seed/super_user';
 import { defaultCompany } from './seed/defaultCompany';
 import { unitsOfMeasurement } from './seed/unitsOfMeasurement';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
+import { permissions } from './seed/permissions';
+import { defaultRoles } from './seed/roles';
 
 // --- FIX: instantiate with adapter ---
 const databaseUrl = process.env.DATABASE_URL;
@@ -19,7 +21,6 @@ async function seedUnits() {
       data: {
         name: unit.name,
         abr: unit.abr,
-        value: unit.value || 1,
       },
     });
   }
@@ -40,33 +41,33 @@ async function seedBranches() {
 }
 
 // Seed Permissions
-// async function seedPermissions() {
-//   for (const perm of permissions) {
-//     await prisma.permission.create({
-//       data: { name: perm.name, value: perm.value, module: perm.module },
-//     });
-//   }
-//   console.log('✅ Permissions seeded successfully');
-// }
+async function seedPermissions() {
+  for (const perm of permissions) {
+    await prisma.permission.create({
+      data: { name: perm.name, value: perm.value, module: perm.module },
+    });
+  }
+  console.log('✅ Permissions seeded successfully');
+}
 
 // Seed Roles
-// async function seedRoles() {
-//   for (const role of defaultRoles) {
-//     await prisma.role.create({
-//       data: {
-//         name: role.name,
-//         permissions: {
-//           connect: role.permissions.map((permValue: string) => ({
-//             value: permValue,
-//           })),
-//         },
-//       },
-//     });
-//   }
-//   console.log('✅ Roles seeded successfully');
-// }
+async function seedRoles() {
+  for (const role of defaultRoles) {
+    await prisma.role.create({
+      data: {
+        name: role.name,
+        permissions: {
+          connect: permissions.map((perm) => ({
+            value: perm.value,
+          })),
+        },
+      },
+    });
+  }
+  console.log('✅ Roles seeded successfully');
+}
 
-// Seed Default Company
+//Seed Default Company
 async function seedCompany() {
   for (const comp of defaultCompany) {
     await prisma.company.create({
@@ -89,13 +90,20 @@ async function seedCompany() {
     });
   }
 }
-// Seed Users
+
+//Seed Users
 async function seedUsers() {
   const headOffice = await prisma.branch.findFirst({
     where: { name: 'Head Office' },
   });
 
+  const role = await prisma.role.findFirst({
+    where: { name: 'Administrator' },
+  });
+
   if (!headOffice) throw new Error('Head Office branch not found');
+
+  if (!role) throw new Error('Administrator role not found');
 
   for (const user of defaultUser) {
     await prisma.employee.create({
@@ -111,6 +119,9 @@ async function seedUsers() {
         branch: {
           connect: { id: headOffice.id },
         },
+        role: {
+          connect: { id: role.id },
+        },
       },
     });
   }
@@ -120,8 +131,8 @@ async function seedUsers() {
 // Main seed function
 async function main() {
   await seedBranches();
-  //await seedPermissions();
-  //await seedRoles();
+  await seedPermissions();
+  await seedRoles();
   await seedUsers();
   await seedCompany();
   await seedUnits();

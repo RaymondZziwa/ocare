@@ -12,6 +12,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { SalesModule } from './sales/sales.module';
 import { ReportsModule } from './reports/reports.module';
+import { RoleModule } from './roles/roles.module';
 @Module({
   imports: [
     ServeStaticModule.forRoot({
@@ -35,6 +36,7 @@ import { ReportsModule } from './reports/reports.module';
     BranchExpenseModule,
     SalesModule,
     ReportsModule,
+    RoleModule,
   ],
 })
 export class AppModule {}

@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ReceivePurchaseDto } from 'src/dto/stockMovement.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 
@@ -80,6 +84,15 @@ export class PurchaseService {
         const item = await tx.item.findUnique({
           where: {
             id: line.itemId,
+          },
+        });
+
+        await tx.item.update({
+          where: {
+            id: line.itemId,
+          },
+          data: {
+            sellingPrice: line.batch.sellingPrice,
           },
         });
 
@@ -282,5 +295,36 @@ export class PurchaseService {
 
       return purchase;
     });
+  }
+
+  async getAllPurchases() {
+    try {
+      const purchases = await this.prisma.purchase.findMany({
+        include: {
+          items: {
+            select: {
+              item: true,
+              buyingPrice: true,
+              sellingPrice: true,
+              quantity: true,
+              wholesalePrice: true,
+              batch: true,
+            },
+          },
+          employee: true,
+          supplier: true,
+          store: true,
+        },
+      });
+      return {
+        data: purchases,
+        message: 'Purchases fetched successfully',
+        status: 200,
+      };
+    } catch {
+      throw new InternalServerErrorException(
+        'There was an issue fetching all purchases.',
+      );
+    }
   }
 }

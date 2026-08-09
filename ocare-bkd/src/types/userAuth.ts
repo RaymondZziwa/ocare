@@ -21,11 +21,11 @@ export interface IUserAuth {
     id: string;
     name: string;
   } | null;
-  // role: {
-  //   id: string;
-  //   name: string;
-  //   permissions: IPermission[];
-  // } | null;
+  role: {
+    id: string;
+    name: string;
+    permissions: IPermission[];
+  } | null;
   token: {
     accessToken: string;
     refreshToken: string;

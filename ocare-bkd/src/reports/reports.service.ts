@@ -566,7 +566,7 @@ export class ReportService {
       whereCondition.storeId = storeId;
     }
 
-    const sales = await this.prisma.sale.findMany({
+    const sales = await this.prisma.shopSale.findMany({
       where: whereCondition,
       include: {
         store: {
@@ -575,7 +575,7 @@ export class ReportService {
             name: true,
           },
         },
-        client: {
+        customer: {
           select: {
             firstName: true,
             lastName: true,
@@ -2285,5 +2285,199 @@ export class ReportService {
       default:
         return `${baseName}-${date}.pdf`;
     }
+  }
+
+  // Purchase Report
+  async purchaseReport(
+    storeId?: string,
+    supplierId?: string,
+    startDate?: string,
+    endDate?: string,
+  ) {
+    const where: any = {};
+
+    if (storeId) {
+      where.storeId = storeId;
+    }
+
+    if (supplierId) {
+      where.supplierId = supplierId;
+    }
+
+    if (startDate || endDate) {
+      where.invoiceDate = {};
+
+      if (startDate) {
+        where.invoiceDate.gte = new Date(startDate);
+      }
+
+      if (endDate) {
+        const endDateTime = new Date(endDate);
+        endDateTime.setHours(23, 59, 59, 999);
+        where.invoiceDate.lte = endDateTime;
+      }
+    }
+
+    const purchases = await this.prisma.purchase.findMany({
+      where,
+      include: {
+        items: {
+          include: {
+            item: true,
+            batch: true,
+          },
+        },
+        supplier: true,
+        store: true,
+        employee: true,
+      },
+      orderBy: {
+        invoiceDate: 'desc',
+      },
+    });
+
+    // Calculate summary
+    const totalPurchases = purchases.length;
+    const totalAmount = purchases.reduce(
+      (sum, purchase) => {
+        const purchaseTotal = purchase.items?.reduce(
+          (itemSum, item) => itemSum + (Number(item.quantity) * Number(item.buyingPrice)),
+          0,
+        ) || 0;
+        return sum + purchaseTotal;
+      },
+      0,
+    );
+    const totalItems = purchases.reduce(
+      (sum, purchase) => sum + (purchase.items?.length || 0),
+      0,
+    );
+
+    // Group by supplier
+    const supplierBreakdown = purchases.reduce((acc, purchase) => {
+      const supplierId = purchase.supplierId;
+      const supplierName =
+        purchase.supplier?.businessName ||
+        `${purchase.supplier?.firstName || ''} ${purchase.supplier?.lastName || ''}`.trim() ||
+        'Unknown';
+
+      const purchaseTotal = purchase.items?.reduce(
+        (itemSum, item) => itemSum + (Number(item.quantity) * Number(item.buyingPrice)),
+        0,
+      ) || 0;
+
+      if (!acc[supplierId]) {
+        acc[supplierId] = {
+          supplierId,
+          supplierName,
+          purchaseCount: 0,
+          totalAmount: 0,
+          itemCount: 0,
+        };
+      }
+
+      acc[supplierId].purchaseCount += 1;
+      acc[supplierId].totalAmount += purchaseTotal;
+      acc[supplierId].itemCount += purchase.items?.length || 0;
+
+      return acc;
+    }, {});
+
+    return {
+      status: 200,
+      data: {
+        purchases,
+        summary: {
+          totalPurchases,
+          totalAmount,
+          totalItems,
+          averagePurchaseAmount: totalPurchases > 0 ? totalAmount / totalPurchases : 0,
+        },
+        supplierBreakdown: Object.values(supplierBreakdown),
+        filters: { storeId, supplierId, startDate, endDate },
+      },
+      message: 'Purchase report fetched successfully',
+    };
+  }
+
+  // Item Batch Report
+  async itemBatchReport(itemId: string) {
+    const item = await this.prisma.item.findUnique({
+      where: { id: itemId },
+      include: {
+        category: true,
+        unit: true,
+      },
+    });
+
+    if (!item) {
+      throw new NotFoundException(`Item with ID ${itemId} not found`);
+    }
+
+    const batches = await this.prisma.batch.findMany({
+      where: { itemId },
+      include: {
+        brand: true,
+      },
+      orderBy: {
+        expiryDate: 'asc',
+      },
+    });
+
+    // Get current stock levels for each batch across all stores
+    const batchStockLevels = await Promise.all(
+      batches.map(async (batch) => {
+        const inventories = await this.prisma.batchInventory.findMany({
+          where: { batchId: batch.id },
+          include: {
+            store: true,
+          },
+        });
+
+        const totalStock = inventories.reduce(
+          (sum, inv) => sum + (inv.quantity || 0),
+          0,
+        );
+
+        const storeBreakdown = inventories.map((inv) => ({
+          storeId: inv.storeId,
+          storeName: inv.store?.name || 'Unknown',
+          quantity: inv.quantity || 0,
+        }));
+
+        return {
+          ...batch,
+          totalStock,
+          storeBreakdown,
+          storeCount: inventories.length,
+        };
+      }),
+    );
+
+    const totalStock = batchStockLevels.reduce(
+      (sum, batch) => sum + batch.totalStock,
+      0,
+    );
+
+    return {
+      status: 200,
+      data: {
+        item: {
+          id: item.id,
+          name: item.name,
+          category: item.category?.name || 'Unknown',
+          unit: item.unit?.name || 'Unknown',
+        },
+        batches: batchStockLevels,
+        summary: {
+          totalBatches: batches.length,
+          totalStock,
+          storeCount: new Set(
+            batchStockLevels.flatMap((b) => b.storeBreakdown.map((s) => s.storeId)),
+          ).size,
+        },
+      },
+      message: 'Item batch report fetched successfully',
+    };
   }
 }
