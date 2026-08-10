@@ -46,10 +46,9 @@ export class JwtRefreshStrategy extends PassportStrategy(
   }
 
   async validate(payload: JwtRefreshPayload) {
-    const rawUserId = payload?.sub;
-    const userId = rawUserId;
+    const userId = payload?.sub;
 
-    if (!Number.isFinite(userId)) {
+    if (!userId) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
