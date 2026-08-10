@@ -70,6 +70,7 @@ export class AuthController {
       httpOnly: true,
       secure: useCrossSiteCookies,
       sameSite,
+      domain: useCrossSiteCookies ? '.megaerpug.com' : undefined,
     };
 
     // Set HTTP-only cookies
@@ -163,6 +164,7 @@ export class AuthController {
       httpOnly: true,
       secure: useCrossSiteCookies,
       sameSite,
+      domain: useCrossSiteCookies ? '.megaerpug.com' : undefined,
     };
 
     // Set new HTTP-only cookies
@@ -206,6 +208,7 @@ export class AuthController {
       httpOnly: true,
       secure: useCrossSiteCookies,
       sameSite,
+      domain: useCrossSiteCookies ? '.megaerpug.com' : undefined,
     };
 
     // Clear the HTTP-only cookies

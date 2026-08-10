@@ -14,7 +14,6 @@ async function bootstrap() {
       'http://localhost:5170',
       'https://ocare-web.netlify.app',
       'https://ocareportal.netlify.app',
-      'https://ocare.megaerpug.com', // Add your production frontend domain
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
