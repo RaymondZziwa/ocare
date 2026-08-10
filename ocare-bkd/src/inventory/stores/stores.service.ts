@@ -19,11 +19,8 @@ export class StoreService {
     };
   }
 
-  async findAll(branchId: string): Promise<GenericResponse> {
+  async findAll(): Promise<GenericResponse> {
     const stores = await this.prismaService.store.findMany({
-      where: {
-        branchId: branchId,
-      },
       include: {
         branch: true,
       },

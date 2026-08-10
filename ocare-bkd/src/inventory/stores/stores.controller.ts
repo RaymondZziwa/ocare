@@ -44,9 +44,9 @@ export class StoresController {
     });
   }
 
-  @Get('fetch-all/:id')
-  findAll(@Param('id') id: string) {
-    return this.storeService.findAll(id);
+  @Get('fetch-all')
+  findAll() {
+    return this.storeService.findAll();
   }
 
   @Get('fetch/:id')
