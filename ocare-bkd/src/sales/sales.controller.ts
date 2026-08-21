@@ -8,6 +8,7 @@ import {
   HttpCode,
   HttpStatus,
   Query,
+  Patch,
 } from '@nestjs/common';
 import { SalesService } from './sales.service';
 import { CreateSaleDto } from 'src/dto/pos.dto';
@@ -32,6 +33,28 @@ export class SalesController {
   @HttpCode(HttpStatus.OK) // matches the service's returned status 200
   async createSystemSale(@Body() createSaleDto:  CreateSystemSaleDto) {
     return this.systemPosService.saveSale(createSaleDto);
+  }
+
+  @Patch('system-sale/:id')
+  @HttpCode(HttpStatus.OK)
+  async updateSystemSale(@Param('id') id: string, @Body() updateSaleDto: CreateSystemSaleDto) {
+    return this.systemPosService.updateSale(id, updateSaleDto);
+  }
+
+  @Delete('system-sale/:id')
+  @HttpCode(HttpStatus.OK)
+  async deleteSystemSale(@Param('id') id: string) {
+    return this.systemPosService.deleteSale(id);
+  }
+
+  @Get('system-sales')
+  async findAllSystemSales() {
+    return this.systemPosService.findAll();
+  }
+
+  @Get('system-sale/:id')
+  async findOneSystemSale(@Param('id') id: string) {
+    return this.systemPosService.findOne(id);
   }
 
   @Post('save-draft')
@@ -71,7 +94,14 @@ export class SalesController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
-  async remove(@Param('id') id: string) {
+  async deleteSale(@Param('id') id: string) {
     return this.salesService.remove(id);
   }
+
+  // @Patch(':id')
+  // @HttpCode(HttpStatus.OK)
+  // async updateSale(@Param('id') id: string, @Body() updateSaleDto: CreateSaleDto) {
+  //   return this.salesService.updateSale(id, updateSaleDto);
+  // }
+
 }

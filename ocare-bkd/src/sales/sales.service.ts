@@ -308,7 +308,7 @@ export class SalesService {
       },
     });
   }
-
+  
   async findOne(id: string) {
     const sale = await this.prisma.sale.findUnique({
       where: { id: id },
@@ -332,9 +332,207 @@ export class SalesService {
     });
     if (!existing) throw new NotFoundException(`Sale with ID ${id} not found`);
 
-    await this.prisma.sale.delete({ where: { id: id } });
+    const items = existing.items as Array<{
+      id: string;
+      unitId: string;
+      quantity: number;
+      batchId?: string;
+    }>;
+
+    await this.prisma.$transaction(async (tx) => {
+      // Restore inventory quantities for each sale item
+      for (const item of items) {
+        // Restore product inventory
+        const productInventory = await tx.productInventory.findFirst({
+          where: {
+            storeId: existing.storeId,
+            itemId: item.id,
+            unitId: item.unitId,
+          },
+        });
+
+        if (productInventory) {
+          await tx.productInventory.update({
+            where: { id: productInventory.id },
+            data: {
+              qty: {
+                increment: item.quantity,
+              },
+            },
+          });
+        }
+
+        // Restore batch inventory
+        if (item.batchId) {
+          const batchInventory = await tx.batchInventory.findFirst({
+            where: {
+              batchId: item.batchId,
+              storeId: existing.storeId,
+            },
+          });
+
+          if (batchInventory) {
+            await tx.batchInventory.update({
+              where: { id: batchInventory.id },
+              data: {
+                quantity: {
+                  increment: item.quantity,
+                },
+              },
+            });
+          }
+        }
+      }
+
+      // Delete the sale
+      await tx.sale.delete({ where: { id: id } });
+    });
 
     return { message: 'Sale deleted successfully' };
+  }
+
+  async updateSale(id: string, updateSaleDto: CreateSaleDto) {
+    // Get the existing sale
+    const existingSale = await this.prisma.sale.findUnique({
+      where: { id },
+      include: {
+        client: true,
+        store: true,
+        employee: true,
+      },
+    });
+
+    if (!existingSale) {
+      throw new NotFoundException(`Sale with ID ${id} not found`);
+    }
+
+    const {
+      customerId,
+      servedBy,
+      source,
+      items: newItems,
+      paymentMethod,
+      notes,
+      total,
+      totalWithDelivery,
+    } = updateSaleDto;
+
+    const oldItems = existingSale.items as Array<{
+      id: string;
+      unitId: string;
+      quantity: number;
+      name: string;
+    }>;
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1️⃣ Fetch inventory matching itemId + unitId in this store
+      const inventories = await tx.productInventory.findMany({
+        where: {
+          storeId: existingSale.storeId,
+          OR: [...oldItems, ...newItems].map((item) => ({
+            itemId: item.id,
+            unitId: item.unitId,
+          })),
+        },
+      });
+
+      // Build lookup map: "itemId-unitId" → inventory
+      const inventoryMap = new Map(
+        inventories.map((inv) => [`${inv.itemId}-${inv.unitId}`, inv]),
+      );
+
+      // 2️⃣ Restore old quantities (add back to inventory)
+      for (const oldItem of oldItems) {
+        const key = `${oldItem.id}-${oldItem.unitId}`;
+        const inventory = inventoryMap.get(key);
+
+        if (inventory) {
+          await tx.productInventory.update({
+            where: { id: inventory.id },
+            data: {
+              qty: inventory.qty + oldItem.quantity,
+            },
+          });
+        }
+      }
+
+      // 3️⃣ Check stock availability for new items
+      for (const newItem of newItems) {
+        const key = `${newItem.id}-${newItem.unitId}`;
+        const inventory = inventoryMap.get(key);
+
+        if (!inventory || inventory.qty < newItem.quantity) {
+          throw new BadRequestException(
+            `Insufficient stock for item "${newItem.name}". Available: ${inventory?.qty ?? 0}, Required: ${newItem.quantity}`,
+          );
+        }
+      }
+
+      // 4️⃣ Reduce inventory quantities for new items
+      for (const newItem of newItems) {
+        const key = `${newItem.id}-${newItem.unitId}`;
+        const inventory = inventoryMap.get(key);
+
+        if (!inventory) {
+          throw new BadRequestException(
+            `Inventory record not found for item "${newItem.name}"`,
+          );
+        }
+
+        await tx.productInventory.update({
+          where: { id: inventory.id },
+          data: {
+            qty: inventory.qty - newItem.quantity,
+          },
+        });
+      }
+
+      // 5️⃣ Update sale payment if exists
+      if (existingSale.salePaymentId) {
+        await tx.salePayment.update({
+          where: { id: existingSale.salePaymentId },
+          data: {
+            amount: totalWithDelivery,
+            notes,
+            cashierId: servedBy,
+          },
+        });
+      }
+
+      // 6️⃣ Update sale record
+      const updatedSale = await tx.sale.update({
+        where: { id },
+        data: {
+          clientId: String(customerId),
+          servedBy,
+          type: source,
+          storeId: existingSale.storeId,
+          total,
+          paymentMethod,
+          notes,
+          items: newItems,
+        },
+        include: {
+          client: true,
+          store: true,
+          employee: true,
+        },
+      });
+
+      // 7️⃣ Add timeline entry for update
+      await tx.saleTimeLine.create({
+        data: {
+          saleId: updatedSale.id,
+          state: 'UPDATED',
+        },
+      });
+
+      return {
+        message: 'Sale updated successfully',
+        data: updatedSale,
+        status: 200,
+      };
+    });
   }
 
   async getAllUserPurchases(id: string) {

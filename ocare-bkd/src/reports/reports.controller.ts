@@ -15,6 +15,11 @@ export class ReportsController {
     return await this.reportService.exportStockLevelAnalysisPDF(id);
   }
 
+  @Get('/batch-expiry/:id')
+  async getBatchExpiryReport(@Param('id') id: string) {
+    return await this.reportService.batchExpiryReport(id);
+  }
+
   @Get('/stock-level-movement/:id')
   async getStockMovementAnalysis(
     @Param('id') id: string,

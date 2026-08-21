@@ -360,6 +360,61 @@ export class DashboardService {
       },
     });
 
+    // Batch expiry metrics
+    const today = new Date();
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(today.getDate() + 30);
+
+    const batchInventories = await this.prisma.batchInventory.findMany({
+      where: storeId ? { storeId } : {},
+      include: {
+        batch: {
+          include: {
+            item: {
+              select: {
+                id: true,
+                name: true,
+                category: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        store: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    const expiringBatches = batchInventories.filter(
+      (bi) => bi.batch.expiryDate <= thirtyDaysFromNow && bi.quantity > 0
+    );
+
+    const expiredBatches = batchInventories.filter(
+      (bi) => bi.batch.expiryDate < today && bi.quantity > 0
+    );
+
+    const expiringSoonPreview = [...expiringBatches]
+      .sort((a, b) => a.batch.expiryDate.getTime() - b.batch.expiryDate.getTime())
+      .slice(0, 10)
+      .map((bi) => ({
+        batchId: bi.batch.id,
+        batchNumber: bi.batch.number,
+        expiryDate: bi.batch.expiryDate,
+        quantity: bi.quantity,
+        itemName: bi.batch.item?.name,
+        category: bi.batch.item?.category?.name,
+        storeId: bi.store?.id,
+        storeName: bi.store?.name,
+      }));
+
     return {
       totalInventoryRecords: inventory.length,
       outOfStockCount: outOfStockItems.length,
@@ -368,6 +423,11 @@ export class DashboardService {
       overStockedCount: overStockedItems.length,
       lowStockItems: lowStockPreview,
       recentInventoryActivity,
+      batchExpiry: {
+        expiringCount: expiringBatches.length,
+        expiredCount: expiredBatches.length,
+        expiringSoon: expiringSoonPreview,
+      },
     };
   }
 

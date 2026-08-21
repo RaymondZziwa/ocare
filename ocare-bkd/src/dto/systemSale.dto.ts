@@ -1,7 +1,6 @@
 import {
   IsArray,
   IsEnum,
-  IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
@@ -16,6 +15,7 @@ export enum PaymentMethod {
   MTN = 'mtn',
   AIRTEL = 'airtel',
   VISA = 'visa',
+  PESAPAL = 'pesapal',
 }
 
 export enum SaleType {
@@ -43,17 +43,17 @@ export class CreateSaleItemDto {
 
 export class CreateSystemSaleDto {
   @IsUUID()
-  storeId: string;
+  storeId!: string;
 
   @IsUUID()
-  soldBy: string;
+  soldBy!: string;
 
   @IsOptional()
   @IsUUID()
   customerId?: string;
 
   @IsEnum(PaymentMethod)
-  paymentMethod: PaymentMethod;
+  paymentMethod!: PaymentMethod;
 
   @IsOptional()
   @IsString()
@@ -67,5 +67,5 @@ export class CreateSystemSaleDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateSaleItemDto)
-  items: CreateSaleItemDto[];
+  items!: CreateSaleItemDto[];
 }

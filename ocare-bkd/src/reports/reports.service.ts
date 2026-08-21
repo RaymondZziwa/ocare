@@ -86,6 +86,83 @@ export class ReportService {
     };
   }
 
+  async batchExpiryReport(storeId?: string) {
+    const today = new Date();
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(today.getDate() + 30);
+    const ninetyDaysFromNow = new Date();
+    ninetyDaysFromNow.setDate(today.getDate() + 90);
+
+    const batchInventories = await this.prisma.batchInventory.findMany({
+      where: storeId ? { storeId } : {},
+      include: {
+        batch: {
+          include: {
+            item: {
+              select: {
+                id: true,
+                name: true,
+                category: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        store: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    const expiredBatches = batchInventories.filter(
+      (bi) => bi.batch.expiryDate < today && bi.quantity > 0
+    );
+
+    const expiringSoonBatches = batchInventories.filter(
+      (bi) => bi.batch.expiryDate >= today && bi.batch.expiryDate <= thirtyDaysFromNow && bi.quantity > 0
+    );
+
+    const expiringLaterBatches = batchInventories.filter(
+      (bi) => bi.batch.expiryDate > thirtyDaysFromNow && bi.batch.expiryDate <= ninetyDaysFromNow && bi.quantity > 0
+    );
+
+    const formatBatchData = (bi: any) => ({
+      batchId: bi.batch.id,
+      batchNumber: bi.batch.number,
+      expiryDate: bi.batch.expiryDate,
+      quantity: bi.quantity,
+      itemName: bi.batch.item?.name,
+      itemId: bi.batch.item?.id,
+      category: bi.batch.item?.category?.name,
+      categoryId: bi.batch.item?.category?.id,
+      storeId: bi.store?.id,
+      storeName: bi.store?.name,
+    });
+
+    return {
+      status: 200,
+      data: {
+        expired: expiredBatches.map(formatBatchData),
+        expiringSoon: expiringSoonBatches.map(formatBatchData),
+        expiringLater: expiringLaterBatches.map(formatBatchData),
+        summary: {
+          expiredCount: expiredBatches.length,
+          expiringSoonCount: expiringSoonBatches.length,
+          expiringLaterCount: expiringLaterBatches.length,
+          totalExpiring: expiredBatches.length + expiringSoonBatches.length + expiringLaterBatches.length,
+        },
+      },
+      message: 'Batch expiry report fetched successfully',
+    };
+  }
+
   async exportStockLevelAnalysisPDF(storeId: string) {
     const reportData = await this.stockLevelAnalysis(storeId);
     const companyInfo = await this.companyService.getProfile();
