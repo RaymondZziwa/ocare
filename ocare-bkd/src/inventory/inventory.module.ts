@@ -24,6 +24,8 @@ import { SupplierController } from './suppliers/supplier.controller';
 import { SupplierService } from './suppliers/supplier.service';
 import { PurchaseService } from './stockMovement/restock.service';
 import { StockAdjustmentService } from './stockMovement/adjust.service';
+import { BatchController } from './batches/batch.controller';
+import { BatchService } from './batches/batch.service';
 
 @Module({
   imports: [
@@ -43,8 +45,10 @@ import { StockAdjustmentService } from './stockMovement/adjust.service';
     StockMovementController,
     InventoryController,
     SupplierController,
+    BatchController,
   ],
   providers: [
+    BatchService,
     BrandService,
     ItemCategoryService,
     PrismaService,
