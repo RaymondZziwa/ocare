@@ -31,20 +31,33 @@ export class DashboardService {
 
   // --- 1️⃣ SALES POINT DATA ---
   private async getSalesPointData() {
-    const sales = await this.prisma.sale.findMany({
-      select: {
-        total: true,
-        store: {
-          select: {
-            id: true,
-            name: true,
+    const [sales, shopSales] = await Promise.all([
+      this.prisma.sale.findMany({
+        select: {
+          total: true,
+          store: {
+            select: {
+              id: true,
+              name: true,
+            },
           },
         },
-      },
-    });
+      }),
+      this.prisma.shopSale.findMany({
+        select: {
+          total: true,
+          store: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      }),
+    ]);
 
     const storeSalesMap: Record<string, number> = {};
-    for (const sale of sales) {
+    for (const sale of [...sales, ...shopSales]) {
       const storeName = sale.store?.name || 'Unknown';
       storeSalesMap[storeName] =
         (storeSalesMap[storeName] || 0) + Number(sale.total);
@@ -61,18 +74,29 @@ export class DashboardService {
     const today = new Date();
     const days = Array.from({ length: 7 }).map((_, i) => subDays(today, 6 - i));
 
-    const sales = await this.prisma.sale.findMany({
-      where: {
-        createdAt: {
-          gte: startOfDay(subDays(today, 6)),
-          lte: endOfDay(today),
+    const [sales, shopSales] = await Promise.all([
+      this.prisma.sale.findMany({
+        where: {
+          createdAt: {
+            gte: startOfDay(subDays(today, 6)),
+            lte: endOfDay(today),
+          },
         },
-      },
-      select: { total: true, createdAt: true },
-    });
+        select: { total: true, createdAt: true },
+      }),
+      this.prisma.shopSale.findMany({
+        where: {
+          createdAt: {
+            gte: startOfDay(subDays(today, 6)),
+            lte: endOfDay(today),
+          },
+        },
+        select: { total: true, createdAt: true },
+      }),
+    ]);
 
     const revenueMap: Record<string, number> = {};
-    for (const sale of sales) {
+    for (const sale of [...sales, ...shopSales]) {
       const dayLabel = format(sale.createdAt, 'EEE');
       revenueMap[dayLabel] = (revenueMap[dayLabel] || 0) + Number(sale.total);
     }
@@ -85,14 +109,39 @@ export class DashboardService {
 
   // --- 3️⃣ TOP 5 SELLING ITEMS ---
   private async getTopSellingItems() {
-    const sales = await this.prisma.sale.findMany({
-      select: { items: true },
-    });
+    const [sales, shopSales] = await Promise.all([
+      this.prisma.sale.findMany({
+        select: { items: true },
+      }),
+      this.prisma.shopSale.findMany({
+        select: {
+          items: {
+            select: {
+              quantity: true,
+              item: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+    ]);
 
     const itemSalesMap: Record<string, number> = {};
+
     for (const sale of sales) {
       const saleItems = this.extractSaleItems(sale.items);
       for (const { name, quantity } of saleItems) {
+        itemSalesMap[name] = (itemSalesMap[name] || 0) + quantity;
+      }
+    }
+
+    for (const sale of shopSales) {
+      for (const item of sale.items) {
+        const name = item.item?.name || 'Unnamed Item';
+        const quantity = Number(item.quantity) || 0;
         itemSalesMap[name] = (itemSalesMap[name] || 0) + quantity;
       }
     }
@@ -111,37 +160,45 @@ export class DashboardService {
     const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
     const yearForLastMonth = currentMonth === 0 ? currentYear - 1 : currentYear;
 
-    // Total revenue comparison
-    const [currentMonthSales, lastMonthSales] = await Promise.all([
+    const currentMonthRange = {
+      gte: new Date(currentYear, currentMonth, 1),
+      lt: new Date(currentYear, currentMonth + 1, 1),
+    };
+
+    const lastMonthRange = {
+      gte: new Date(yearForLastMonth, lastMonth, 1),
+      lt: new Date(currentYear, currentMonth, 1),
+    };
+
+    const [currentMonthSales, lastMonthSales, currentMonthShopSales, lastMonthShopSales] = await Promise.all([
       this.prisma.sale.findMany({
-        where: {
-          createdAt: {
-            gte: new Date(currentYear, currentMonth, 1),
-            lt: new Date(currentYear, currentMonth + 1, 1),
-          },
-        },
+        where: { createdAt: currentMonthRange },
         select: { total: true },
       }),
       this.prisma.sale.findMany({
-        where: {
-          createdAt: {
-            gte: new Date(yearForLastMonth, lastMonth, 1),
-            lt: new Date(currentYear, currentMonth, 1),
-          },
-        },
+        where: { createdAt: lastMonthRange },
+        select: { total: true },
+      }),
+      this.prisma.shopSale.findMany({
+        where: { createdAt: currentMonthRange },
+        select: { total: true },
+      }),
+      this.prisma.shopSale.findMany({
+        where: { createdAt: lastMonthRange },
         select: { total: true },
       }),
     ]);
 
-    const currentRevenue = currentMonthSales.reduce(
+    const currentRevenue = [...currentMonthSales, ...currentMonthShopSales].reduce(
       (s, a) => s + Number(a.total),
       0,
     );
-    const lastRevenue = lastMonthSales.reduce((s, a) => s + Number(a.total), 0);
+    const lastRevenue = [...lastMonthSales, ...lastMonthShopSales].reduce(
+      (s, a) => s + Number(a.total),
+      0,
+    );
     const revenueChange =
-      lastRevenue === 0
-        ? 0
-        : ((currentRevenue - lastRevenue) / lastRevenue) * 100;
+      lastRevenue === 0 ? 0 : ((currentRevenue - lastRevenue) / lastRevenue) * 100;
 
     // Clients comparison
     const [currentMonthClients, lastMonthClients] = await Promise.all([
@@ -168,25 +225,16 @@ export class DashboardService {
         ? 0
         : ((currentMonthClients - lastMonthClients) / lastMonthClients) * 100;
 
-    // Daily sales comparison
     const today = new Date();
     const yesterday = new Date();
     yesterday.setDate(today.getDate() - 1);
 
-    const [todaySales, yesterdaySales] = await Promise.all([
+    const [todaySales, yesterdaySales, todayShopSales, yesterdayShopSales] = await Promise.all([
       this.prisma.sale.findMany({
         where: {
           createdAt: {
-            gte: new Date(
-              today.getFullYear(),
-              today.getMonth(),
-              today.getDate(),
-            ),
-            lt: new Date(
-              today.getFullYear(),
-              today.getMonth(),
-              today.getDate() + 1,
-            ),
+            gte: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
+            lt: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1),
           },
         },
         select: { total: true },
@@ -194,55 +242,81 @@ export class DashboardService {
       this.prisma.sale.findMany({
         where: {
           createdAt: {
-            gte: new Date(
-              yesterday.getFullYear(),
-              yesterday.getMonth(),
-              yesterday.getDate(),
-            ),
-            lt: new Date(
-              today.getFullYear(),
-              today.getMonth(),
-              today.getDate(),
-            ),
+            gte: new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate()),
+            lt: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
+          },
+        },
+        select: { total: true },
+      }),
+      this.prisma.shopSale.findMany({
+        where: {
+          createdAt: {
+            gte: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
+            lt: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1),
+          },
+        },
+        select: { total: true },
+      }),
+      this.prisma.shopSale.findMany({
+        where: {
+          createdAt: {
+            gte: new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate()),
+            lt: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
           },
         },
         select: { total: true },
       }),
     ]);
 
-    const todayTotal = todaySales.reduce((s, a) => s + Number(a.total), 0);
-    const yesterdayTotal = yesterdaySales.reduce(
+    const todayTotal = [...todaySales, ...todayShopSales].reduce(
+      (s, a) => s + Number(a.total),
+      0,
+    );
+    const yesterdayTotal = [...yesterdaySales, ...yesterdayShopSales].reduce(
       (s, a) => s + Number(a.total),
       0,
     );
     const dailyChange =
-      yesterdayTotal === 0
-        ? 0
-        : ((todayTotal - yesterdayTotal) / yesterdayTotal) * 100;
+      yesterdayTotal === 0 ? 0 : ((todayTotal - yesterdayTotal) / yesterdayTotal) * 100;
 
-    // Top store for month
-    const monthlySalesByStore = await this.prisma.sale.groupBy({
-      by: ['storeId'],
-      where: {
-        createdAt: {
-          gte: new Date(currentYear, currentMonth, 1),
-          lt: new Date(currentYear, currentMonth + 1, 1),
+    const [monthlySalesByStore, monthlyShopSalesByStore] = await Promise.all([
+      this.prisma.sale.groupBy({
+        by: ['storeId'],
+        where: {
+          createdAt: {
+            gte: new Date(currentYear, currentMonth, 1),
+            lt: new Date(currentYear, currentMonth + 1, 1),
+          },
         },
-      },
-      _sum: { total: true },
-    });
+        _sum: { total: true },
+      }),
+      this.prisma.shopSale.groupBy({
+        by: ['storeId'],
+        where: {
+          createdAt: {
+            gte: new Date(currentYear, currentMonth, 1),
+            lt: new Date(currentYear, currentMonth + 1, 1),
+          },
+        },
+        _sum: { total: true },
+      }),
+    ]);
+
+    const storeTotals: Record<string, number> = {};
+    for (const sale of [...monthlySalesByStore, ...monthlyShopSalesByStore]) {
+      const storeId = sale.storeId;
+      storeTotals[storeId] = (storeTotals[storeId] || 0) + Number(sale._sum?.total || 0);
+    }
 
     let topStore = { storeName: 'N/A', totalSales: 0 };
-    if (monthlySalesByStore.length > 0) {
-      const best = monthlySalesByStore.reduce((a, b) =>
-        (a._sum.total || 0) > (b._sum.total || 0) ? a : b,
-      );
+    const bestStoreId = Object.entries(storeTotals).sort((a, b) => b[1] - a[1])[0]?.[0];
+    if (bestStoreId) {
       const store = await this.prisma.store.findUnique({
-        where: { id: best.storeId },
+        where: { id: bestStoreId },
       });
       topStore = {
         storeName: store?.name || 'N/A',
-        totalSales: Number(best._sum?.total) || 0,
+        totalSales: storeTotals[bestStoreId],
       };
     }
 
