@@ -1231,6 +1231,7 @@ export class ReportService {
       whereCondition.storeId = storeId;
     }
 
+    // Fetch POS/Web sales stored as JSON items
     const sales = await this.prisma.sale.findMany({
       where: whereCondition,
       include: {
@@ -1239,15 +1240,42 @@ export class ReportService {
       orderBy: { createdAt: 'desc' },
     });
 
-    const processedSales = sales.map((sale) => {
-      const items = Array.isArray(sale.items)
-        ? sale.items
-        : typeof sale.items === 'string'
-          ? JSON.parse(sale.items)
+    // Fetch ShopSale records which store items in a related table
+    const shopSales = await this.prisma.shopSale.findMany({
+      where: whereCondition,
+      include: {
+        store: { select: { id: true, name: true } },
+        items: { include: { item: true, batch: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Normalize both sale types into a common shape: { ...sale, items: Array<cartItemLike> }
+    const processedSales = [
+      ...sales.map((sale) => {
+        const items = Array.isArray(sale.items)
+          ? sale.items
+          : typeof sale.items === 'string'
+            ? JSON.parse(sale.items)
+            : [];
+
+        return { ...sale, items };
+      }),
+      ...shopSales.map((s) => {
+        const items = Array.isArray(s.items)
+          ? s.items.map((si: any) => ({
+              id: si.itemId,
+              name: si.item?.name,
+              quantity: Number(si.quantity || 0),
+              price: Number(si.unitPrice ?? si.total ?? 0),
+              sellingPrice: Number(si.unitPrice ?? si.item?.sellingPrice ?? 0),
+              batch: si.batch ? { buyingPrice: Number(si.batch.buyingPrice ?? 0) } : undefined,
+            }))
           : [];
 
-      return { ...sale, items };
-    });
+        return { ...s, items };
+      }),
+    ];
 
     const itemIdSet = new Set<string>();
     processedSales.forEach((sale) => {
