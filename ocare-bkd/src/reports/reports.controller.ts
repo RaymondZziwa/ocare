@@ -163,6 +163,16 @@ export class ReportsController {
     );
   }
 
+  // Profit Analysis
+  @Get('sales/profit-analysis')
+  async getProfitAnalysis(
+    @Query('storeId') storeId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return await this.reportService.profitAnalysis(storeId, startDate, endDate);
+  }
+
   // Export PDF Reports
   // Alternative export endpoints with query parameters
 

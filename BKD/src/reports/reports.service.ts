@@ -1147,6 +1147,165 @@ export class ReportService {
     };
   }
 
+  // Profit Analysis
+  async profitAnalysis(
+    storeId?: string,
+    startDate?: string,
+    endDate?: string,
+  ) {
+    const whereCondition: any = {};
+
+    // Date range filter
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+
+      whereCondition.createdAt = { gte: start, lte: end };
+    } else if (startDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      whereCondition.createdAt = { gte: start };
+    }
+
+    if (storeId) {
+      whereCondition.storeId = storeId;
+    }
+
+    const sales = await this.prisma.sale.findMany({
+      where: whereCondition,
+      include: {
+        store: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const processedSales = sales.map((sale) => {
+      const items = Array.isArray(sale.items)
+        ? sale.items
+        : typeof sale.items === 'string'
+          ? JSON.parse(sale.items)
+          : [];
+
+      return { ...sale, items };
+    });
+
+    // Collect unique item ids
+    const itemIdSet = new Set<string>();
+    processedSales.forEach((sale) => {
+      sale.items.forEach((it: any) => {
+        if (it?.id) itemIdSet.add(it.id);
+      });
+    });
+
+    const itemIds = Array.from(itemIdSet);
+
+    const items =
+      itemIds.length > 0
+        ? await this.prisma.item.findMany({ where: { id: { in: itemIds } } })
+        : [];
+
+    const itemMap = new Map(items.map((it) => [it.id, it]));
+
+    const productProfits = new Map<string, any>();
+    let totalRevenue = 0;
+    let totalCost = 0;
+    let totalProfit = 0;
+    let totalUnits = 0;
+
+    const salesDetails: any[] = [];
+
+    for (const sale of processedSales) {
+      const saleItemsDetails: any[] = [];
+
+      for (const it of sale.items) {
+        const qty = Number(it.quantity || 0);
+        const sellingPrice = Number(
+          it.price !== undefined ? it.price : it.sellingPrice || 0,
+        );
+
+        // Prefer batch buying price if available, otherwise fallback to item.buyingPrice
+        const buyingPrice = Number(
+          it.batch?.buyingPrice ?? it.buyingPrice ?? itemMap.get(it.id)?.buyingPrice ?? 0,
+        );
+
+        const revenue = sellingPrice * qty;
+        const cost = buyingPrice * qty;
+        const profit = revenue - cost;
+        const profitPercent = cost > 0 ? (profit / cost) * 100 : null;
+
+        totalRevenue += revenue;
+        totalCost += cost;
+        totalProfit += profit;
+        totalUnits += qty;
+
+        // aggregate per product
+        const prodKey = String(it.id);
+        const existing = productProfits.get(prodKey) || {
+          id: prodKey,
+          name: it.name || itemMap.get(it.id)?.name || 'Unknown',
+          unitsSold: 0,
+          revenue: 0,
+          cost: 0,
+          profit: 0,
+        };
+
+        existing.unitsSold += qty;
+        existing.revenue += revenue;
+        existing.cost += cost;
+        existing.profit += profit;
+
+        productProfits.set(prodKey, existing);
+
+        saleItemsDetails.push({
+          itemId: it.id,
+          name: it.name || itemMap.get(it.id)?.name || 'Unknown',
+          quantity: qty,
+          sellingPrice,
+          buyingPrice,
+          revenue,
+          cost,
+          profit,
+          profitPercent,
+        });
+      }
+
+      salesDetails.push({
+        saleId: sale.id,
+        date: sale.createdAt,
+        store: sale.store?.name || null,
+        items: saleItemsDetails,
+      });
+    }
+
+    const productProfitList = Array.from(productProfits.values()).map((p) => ({
+      ...p,
+      profitPercent: p.cost > 0 ? (p.profit / p.cost) * 100 : null,
+    }));
+
+    const summary = {
+      totalRevenue,
+      totalCost,
+      totalProfit,
+      profitPercent: totalCost > 0 ? (totalProfit / totalCost) * 100 : null,
+      totalUnits,
+      totalProducts: productProfitList.length,
+    };
+
+    return {
+      status: 200,
+      data: {
+        sales: salesDetails,
+        productProfits: productProfitList.sort((a: any, b: any) => b.profit - a.profit),
+        summary,
+        filters: { storeId, startDate, endDate },
+      },
+      message: 'Profit analysis fetched successfully',
+    };
+  }
+
   async exportSalesReportToPDF(
     reportType:
       | 'daily-sales'
