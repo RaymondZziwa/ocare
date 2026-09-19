@@ -6,6 +6,7 @@ import {
   UseInterceptors,
   UploadedFiles,
   Param,
+  Delete,
 } from '@nestjs/common';
 import {
   AdjustStockDto,
@@ -58,6 +59,21 @@ export class StockMovementController {
   ) {
     console.log(dto);
     return this.stockMovementService.create(files, dto);
+  }
+
+  @Post('draft-restock')
+  async saveDraftRestock(@Body() dto: ReceivePurchaseDto) {
+    return this.purchaseService.saveDraftRestock(dto);
+  }
+
+  @Get('restock-drafts')
+  async getAllDraftRestocks() {
+    return this.purchaseService.getAllDraftRestocks();
+  }
+
+  @Delete('draft-restock/:id')
+  async deleteRestockDraft(@Param('id') id: string) {
+    return this.purchaseService.deleteRestockDraft(id);
   }
 
   @Post('restock')

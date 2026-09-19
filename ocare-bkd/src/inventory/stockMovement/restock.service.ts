@@ -2,6 +2,7 @@ import {
   Injectable,
   BadRequestException,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { ReceivePurchaseDto } from 'src/dto/stockMovement.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -326,5 +327,60 @@ export class PurchaseService {
         'There was an issue fetching all purchases.',
       );
     }
+  }
+
+  async saveDraftRestock(dto: ReceivePurchaseDto) {
+    await this.prisma.draftInvoice.create({
+      data: {
+        deliveryNoteNumber: dto.deliveryNoteNumber,
+        invoiceDate: dto.invoiceDate,
+        invoiceNumber: dto.invoiceNumber,
+        items: dto.items,
+        receivedBy: dto.receivedBy,
+        storeId: dto.storeId,
+        supplierId: dto.supplierId,
+      },
+    });
+
+    return {
+      message: 'Draft saved successfully',
+    };
+  }
+
+  async getAllDraftRestocks() {
+    const drafts = await this.prisma.draftInvoice.findMany({
+      include: {
+        store: true,
+        supplier: true,
+        employee: true,
+      },
+
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return {
+      data: drafts,
+      message: 'Drafts fetched successfully',
+    };
+  }
+
+  async deleteRestockDraft(id: string) {
+    const draft = await this.prisma.draftInvoice.findUniqueOrThrow({
+      where: { id },
+    });
+
+    if (!draft) throw new NotFoundException('Draft not found');
+
+    await this.prisma.draftInvoice.delete({
+      where: {
+        id,
+      },
+    });
+
+    return {
+      message: 'Draft deleted successfully',
+    };
   }
 }

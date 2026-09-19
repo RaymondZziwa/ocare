@@ -215,6 +215,7 @@ model Store {
   @@map("stores") // Explicit table name
   purchases Purchase[]
   shopSales ShopSale[]
+  draftInvoices DraftInvoice[]
 }
 
 model Unit {
@@ -620,6 +621,7 @@ model Employee {
   @@map("employees")
   purchases Purchase[]
   shopSales ShopSale[]
+  draftInvoices DraftInvoice[]
 }
 
 model branchExpense {
@@ -753,6 +755,7 @@ model Supplier {
   @@index([createdAt])
   inventoryRecords InventoryRecord[]
   purchases Purchase[]
+  draftInvoices DraftInvoice[]
 }
 
 model Purchase {
@@ -924,5 +927,21 @@ model DraftSale {
 
   createdAt DateTime @default(now())
 
+  updatedAt DateTime @updatedAt
+}
+
+model DraftInvoice {
+  id String @id @default(uuid())
+  deliveryNoteNumber String?
+  invoiceNumber String?
+  invoiceDate DateTime?
+  items Json?
+  receivedBy String?
+  employee Employee? @relation(fields:[receivedBy], references:[id], onDelete:Cascade)
+  storeId String?
+  store Store? @relation(fields:[storeId], references:[id], onDelete:Cascade)
+  supplierId String?
+  supplier Supplier? @relation(fields:[supplierId], references:[id], onDelete:Cascade)
+  createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
