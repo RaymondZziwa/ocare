@@ -11,6 +11,11 @@ export class BatchService {
       include: {
         item: true,
         brand: true,
+        batchInventories: {
+          select: {
+            quantity: true,
+          },
+        },
       },
     });
     return {

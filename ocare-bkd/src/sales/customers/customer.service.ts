@@ -12,14 +12,14 @@ export class ClientService {
         ...dto,
         fullName: `${dto.firstName} ${dto.lastName}`,
         provider: 'In_Shop',
-        email: 'generic@gmail.com',
+        email: `client-${crypto.randomUUID()}@gmail.com`,
         password: 'xx',
       },
     });
 
     return {
       data: client,
-      message: 'Client created successfullly',
+      message: 'Client created successfully',
       status: 200,
     };
   }
@@ -31,7 +31,7 @@ export class ClientService {
 
     return {
       data: clients,
-      message: 'Clients fetched successfullly',
+      message: 'Clients fetched successfully',
       status: 200,
     };
   }
