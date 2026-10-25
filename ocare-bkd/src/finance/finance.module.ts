@@ -7,24 +7,27 @@ import { ChannelService } from './channels/channel.service';
 import { WalletService } from './wallets/wallet.service';
 import { WalletController } from './wallets/wallet.controller';
 import { HttpModule } from '@nestjs/axios';
-import { TransactionsController } from './transactions/transactions.controller';
-import { TransactionService } from './transactions/transactions.service';
-import { MarzPayService } from 'src/sales/marz/marz.service';
+//import { TransactionsController } from './transactions/transactions.controller';
+// import { TransactionService } from './transactions/transactions.service';
+// import { MarzPayService } from 'src/sales/marz/marz.service';
 import { ResendMailService } from 'src/utils/mailing/mailing.service';
 import { ReceiptService } from 'src/web-app/orders/receiptGeneration.service';
 import { VerificationService } from 'src/web-app/auth/verification.service';
 
 @Module({
   imports: [HttpModule],
-  controllers: [ChannelController, WalletController, TransactionsController],
+  controllers: [
+    ChannelController,
+    WalletController /*, TransactionsController*/,
+  ],
   providers: [
     WalletService,
     ChannelService,
     PrismaService,
     JwtService,
     ConfigService,
-    TransactionService,
-    MarzPayService,
+    // TransactionService,
+    // MarzPayService,
     ResendMailService,
     ReceiptService,
     VerificationService,

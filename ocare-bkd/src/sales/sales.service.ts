@@ -89,15 +89,7 @@ export class SalesService {
       phoneNumber,
     } = createSaleDto;
 
-    let isMobileMoneyPayment = false;
     let storeToUseId = storeId;
-    if (
-      paymentMethod === 'airtel' ||
-      paymentMethod === 'mtn' ||
-      paymentMethod === 'visa'
-    ) {
-      isMobileMoneyPayment = true;
-    }
 
     if (source !== 'In_shop') {
       const store = await this.prisma.store.findFirst({
@@ -113,188 +105,291 @@ export class SalesService {
       storeToUseId = store.id;
     }
 
-    if (isMobileMoneyPayment) {
-      const inventories = await this.prisma.productInventory.findMany({
-        where: {
-          storeId: storeToUseId,
-          OR: items.map((item) => ({
-            itemId: item.id,
-            unitId: item.unitId,
-          })),
-        },
-      });
+    const inventories = await this.prisma.productInventory.findMany({
+      where: {
+        storeId: storeToUseId,
+        OR: items.map((item) => ({
+          itemId: item.id,
+          unitId: item.unitId,
+        })),
+      },
+    });
 
-      // Build lookup map: "itemId-unitId" → inventory
-      const inventoryMap = new Map(
-        inventories.map((inv) => [`${inv.itemId}-${inv.unitId}`, inv]),
-      );
+    // Build lookup map: "itemId-unitId" → inventory
+    const inventoryMap = new Map(
+      inventories.map((inv) => [`${inv.itemId}-${inv.unitId}`, inv]),
+    );
 
-      // 2️⃣ Check stock availability
-      for (const saleItem of items) {
-        console.log(saleItem);
-        const key = `${saleItem.id}-${saleItem.unitId}`;
-        const inventory = inventoryMap.get(key);
+    // 2️⃣ Check stock availability
+    for (const saleItem of items) {
+      console.log(saleItem);
+      const key = `${saleItem.id}-${saleItem.unitId}`;
+      const inventory = inventoryMap.get(key);
 
-        if (!inventory || inventory.qty < saleItem.quantity) {
-          console.log(inventory?.qty, saleItem.quantity);
-          throw new BadRequestException(
-            `Insufficient stock for item "${saleItem.name}". Available: ${inventory?.qty ?? 0}, Required: ${saleItem.quantity}`,
-          );
-        }
-      }
-
-      const response = await this.initiateMobileMoneyCollection(
-        source === 'In_shop' ? amountToCharge : totalWithDelivery,
-        `+${phoneNumber}`,
-      );
-
-      // 4️⃣ Create sale record and payment records inside a transaction
-      const sale = await this.prisma.$transaction(async (tx) => {
-        const salePayment = await tx.salePayment.create({
-          data: {
-            phone_number: phoneNumber,
-            amount: createSaleDto.totalWithDelivery,
-            notes,
-            cashierId: servedBy,
-            transaction_uuid: response.data.transaction.uuid,
-            transaction_reference: response.data.transaction.reference,
-            provider_transaction_id:
-              response.data.transaction.provider_reference,
-            amount_formatted: String(createSaleDto.totalWithDelivery),
-            provider: response.data.collection.provider,
-            provider_mode: response.data.collection.mode,
-          },
-        });
-
-        const createdSale = await tx.sale.create({
-          data: {
-            clientId: String(customerId),
-            servedBy,
-            type: source,
-            storeId: storeToUseId,
-            status: 'UNPAID',
-            saleStatus: 'PENDING',
-            total,
-            paymentMethod,
-            salePaymentId: salePayment.id,
-            notes,
-            items,
-          },
-          include: {
-            client: true,
-            store: true,
-            employee: true,
-          },
-        });
-        await tx.saleTimeLine.create({
-          data: {
-            saleId: createdSale.id,
-            state: 'CONFIRMED',
-          },
-        });
-
-        return createdSale;
-      });
-
-      return {
-        message:
-          'Mobile money collection initiated. Sale will be completed upon successful payment.',
-        data: { sale, transaction: response.data.transaction },
-        status: 200,
-      };
-    } else {
-      return this.prisma.$transaction(async (tx) => {
-        // 1️⃣ Fetch inventory matching itemId + unitId in this store
-        const inventories = await tx.productInventory.findMany({
-          where: {
-            storeId,
-            OR: items.map((item) => ({
-              itemId: item.id,
-              unitId: item.unitId,
-            })),
-          },
-        });
-
-        // Build lookup map: "itemId-unitId" → inventory
-        const inventoryMap = new Map(
-          inventories.map((inv) => [`${inv.itemId}-${inv.unitId}`, inv]),
+      if (!inventory || inventory.qty < saleItem.quantity) {
+        console.log(inventory?.qty, saleItem.quantity);
+        throw new BadRequestException(
+          `Insufficient stock for item "${saleItem.name}". Available: ${inventory?.qty ?? 0}, Required: ${saleItem.quantity}`,
         );
-
-        // 2️⃣ Check stock availability
-        for (const saleItem of items) {
-          const key = `${saleItem.id}-${saleItem.unitId}`;
-          const inventory = inventoryMap.get(key);
-
-          if (!inventory || inventory.qty < saleItem.quantity) {
-            throw new BadRequestException(
-              `Insufficient stock for item "${saleItem.name}". Available: ${inventory?.qty ?? 0}, Required: ${saleItem.quantity}`,
-            );
-          }
-        }
-
-        // 3️⃣ Reduce inventory quantities
-        for (const saleItem of items) {
-          const key = `${saleItem.id}-${saleItem.unitId}`;
-          const inventory = inventoryMap.get(key);
-
-          if (!inventory) {
-            throw new BadRequestException(
-              `Inventory record not found for item "${saleItem.name}"`,
-            );
-          }
-
-          await tx.productInventory.update({
-            where: { id: inventory.id },
-            data: {
-              qty: inventory.qty - saleItem.quantity,
-            },
-          });
-        }
-
-        const salePayment = await tx.salePayment.create({
-          data: {
-            amount: createSaleDto.totalWithDelivery,
-            notes,
-            cashierId: servedBy,
-          },
-        });
-
-        // 4️⃣ Create sale record
-        const sale = await tx.sale.create({
-          data: {
-            clientId: String(customerId),
-            servedBy,
-            type: source,
-            storeId: storeToUseId,
-            status: 'FULLY_PAID',
-            saleStatus: 'SUCCESSFUL',
-            total,
-            paymentMethod,
-            salePaymentId: salePayment.id,
-            notes,
-            items,
-          },
-          include: {
-            client: true,
-            store: true,
-            employee: true,
-          },
-        });
-
-        await tx.saleTimeLine.create({
-          data: {
-            saleId: sale.id,
-            state: 'CONFIRMED',
-          },
-        });
-        return {
-          message: 'Sale created successfully',
-          data: sale,
-          status: 200,
-        };
-      });
+      }
     }
+
+    const createdSale = await this.prisma.sale.create({
+      data: {
+        clientId: String(customerId),
+        servedBy,
+        type: source,
+        storeId: storeToUseId,
+        status: 'UNPAID',
+        saleStatus: 'PENDING',
+        total,
+        paymentMethod,
+        notes,
+        items,
+      },
+      include: {
+        client: true,
+        store: true,
+        employee: true,
+      },
+    });
+
+    await this.prisma.saleTimeLine.create({
+      data: {
+        saleId: createdSale.id,
+        state: 'CONFIRMED',
+      },
+    });
+
+    return {
+      message:
+        'Your order has been confirmed. We shall reach out to you shortly',
+      data: { createdSale },
+      status: 200,
+    };
   }
+
+  // async create(createSaleDto: CreateSaleDto) {
+  //   const {
+  //     customerId,
+  //     servedBy,
+  //     source,
+  //     storeId,
+  //     amountToCharge,
+  //     items,
+  //     paymentMethod,
+  //     notes,
+  //     total,
+  //     totalWithDelivery,
+  //     phoneNumber,
+  //   } = createSaleDto;
+
+  //   let isMobileMoneyPayment = false;
+  //   let storeToUseId = storeId;
+  //   if (
+  //     paymentMethod === 'airtel' ||
+  //     paymentMethod === 'mtn' ||
+  //     paymentMethod === 'visa'
+  //   ) {
+  //     isMobileMoneyPayment = true;
+  //   }
+
+  //   if (source !== 'In_shop') {
+  //     const store = await this.prisma.store.findFirst({
+  //       where: {
+  //         isForAppSales: true,
+  //       },
+  //     });
+
+  //     if (!store)
+  //       throw new NotFoundException(
+  //         'There is no store set to handle Web and App sales',
+  //       );
+  //     storeToUseId = store.id;
+  //   }
+
+  //   if (isMobileMoneyPayment) {
+  //     const inventories = await this.prisma.productInventory.findMany({
+  //       where: {
+  //         storeId: storeToUseId,
+  //         OR: items.map((item) => ({
+  //           itemId: item.id,
+  //           unitId: item.unitId,
+  //         })),
+  //       },
+  //     });
+
+  //     // Build lookup map: "itemId-unitId" → inventory
+  //     const inventoryMap = new Map(
+  //       inventories.map((inv) => [`${inv.itemId}-${inv.unitId}`, inv]),
+  //     );
+
+  //     // 2️⃣ Check stock availability
+  //     for (const saleItem of items) {
+  //       console.log(saleItem);
+  //       const key = `${saleItem.id}-${saleItem.unitId}`;
+  //       const inventory = inventoryMap.get(key);
+
+  //       if (!inventory || inventory.qty < saleItem.quantity) {
+  //         console.log(inventory?.qty, saleItem.quantity);
+  //         throw new BadRequestException(
+  //           `Insufficient stock for item "${saleItem.name}". Available: ${inventory?.qty ?? 0}, Required: ${saleItem.quantity}`,
+  //         );
+  //       }
+  //     }
+
+  //     const response = await this.initiateMobileMoneyCollection(
+  //       source === 'In_shop' ? amountToCharge : totalWithDelivery,
+  //       `+${phoneNumber}`,
+  //     );
+
+  //     // 4️⃣ Create sale record and payment records inside a transaction
+  //     const sale = await this.prisma.$transaction(async (tx) => {
+  //       const salePayment = await tx.salePayment.create({
+  //         data: {
+  //           phone_number: phoneNumber,
+  //           amount: createSaleDto.totalWithDelivery,
+  //           notes,
+  //           cashierId: servedBy,
+  //           transaction_uuid: response.data.transaction.uuid,
+  //           transaction_reference: response.data.transaction.reference,
+  //           provider_transaction_id:
+  //             response.data.transaction.provider_reference,
+  //           amount_formatted: String(createSaleDto.totalWithDelivery),
+  //           provider: response.data.collection.provider,
+  //           provider_mode: response.data.collection.mode,
+  //         },
+  //       });
+
+  //       const createdSale = await tx.sale.create({
+  //         data: {
+  //           clientId: String(customerId),
+  //           servedBy,
+  //           type: source,
+  //           storeId: storeToUseId,
+  //           status: 'UNPAID',
+  //           saleStatus: 'PENDING',
+  //           total,
+  //           paymentMethod,
+  //           salePaymentId: salePayment.id,
+  //           notes,
+  //           items,
+  //         },
+  //         include: {
+  //           client: true,
+  //           store: true,
+  //           employee: true,
+  //         },
+  //       });
+  //       await tx.saleTimeLine.create({
+  //         data: {
+  //           saleId: createdSale.id,
+  //           state: 'CONFIRMED',
+  //         },
+  //       });
+
+  //       return createdSale;
+  //     });
+
+  //     return {
+  //       message:
+  //         'Mobile money collection initiated. Sale will be completed upon successful payment.',
+  //       data: { sale, transaction: response.data.transaction },
+  //       status: 200,
+  //     };
+  //   } else {
+  //     return this.prisma.$transaction(async (tx) => {
+  //       // 1️⃣ Fetch inventory matching itemId + unitId in this store
+  //       const inventories = await tx.productInventory.findMany({
+  //         where: {
+  //           storeId,
+  //           OR: items.map((item) => ({
+  //             itemId: item.id,
+  //             unitId: item.unitId,
+  //           })),
+  //         },
+  //       });
+
+  //       // Build lookup map: "itemId-unitId" → inventory
+  //       const inventoryMap = new Map(
+  //         inventories.map((inv) => [`${inv.itemId}-${inv.unitId}`, inv]),
+  //       );
+
+  //       // 2️⃣ Check stock availability
+  //       for (const saleItem of items) {
+  //         const key = `${saleItem.id}-${saleItem.unitId}`;
+  //         const inventory = inventoryMap.get(key);
+
+  //         if (!inventory || inventory.qty < saleItem.quantity) {
+  //           throw new BadRequestException(
+  //             `Insufficient stock for item "${saleItem.name}". Available: ${inventory?.qty ?? 0}, Required: ${saleItem.quantity}`,
+  //           );
+  //         }
+  //       }
+
+  //       // 3️⃣ Reduce inventory quantities
+  //       for (const saleItem of items) {
+  //         const key = `${saleItem.id}-${saleItem.unitId}`;
+  //         const inventory = inventoryMap.get(key);
+
+  //         if (!inventory) {
+  //           throw new BadRequestException(
+  //             `Inventory record not found for item "${saleItem.name}"`,
+  //           );
+  //         }
+
+  //         await tx.productInventory.update({
+  //           where: { id: inventory.id },
+  //           data: {
+  //             qty: inventory.qty - saleItem.quantity,
+  //           },
+  //         });
+  //       }
+
+  //       const salePayment = await tx.salePayment.create({
+  //         data: {
+  //           amount: createSaleDto.totalWithDelivery,
+  //           notes,
+  //           cashierId: servedBy,
+  //         },
+  //       });
+
+  //       // 4️⃣ Create sale record
+  //       const sale = await tx.sale.create({
+  //         data: {
+  //           clientId: String(customerId),
+  //           servedBy,
+  //           type: source,
+  //           storeId: storeToUseId,
+  //           status: 'FULLY_PAID',
+  //           saleStatus: 'SUCCESSFUL',
+  //           total,
+  //           paymentMethod,
+  //           salePaymentId: salePayment.id,
+  //           notes,
+  //           items,
+  //         },
+  //         include: {
+  //           client: true,
+  //           store: true,
+  //           employee: true,
+  //         },
+  //       });
+
+  //       await tx.saleTimeLine.create({
+  //         data: {
+  //           saleId: sale.id,
+  //           state: 'CONFIRMED',
+  //         },
+  //       });
+  //       return {
+  //         message: 'Sale created successfully',
+  //         data: sale,
+  //         status: 200,
+  //       };
+  //     });
+  //   }
+  // }
 
   async findAll() {
     return this.prisma.sale.findMany({
@@ -308,7 +403,7 @@ export class SalesService {
       },
     });
   }
-  
+
   async findOne(id: string) {
     const sale = await this.prisma.sale.findUnique({
       where: { id: id },
@@ -488,16 +583,7 @@ export class SalesService {
       }
 
       // 5️⃣ Update sale payment if exists
-      if (existingSale.salePaymentId) {
-        await tx.salePayment.update({
-          where: { id: existingSale.salePaymentId },
-          data: {
-            amount: totalWithDelivery,
-            notes,
-            cashierId: servedBy,
-          },
-        });
-      }
+     
 
       // 6️⃣ Update sale record
       const updatedSale = await tx.sale.update({

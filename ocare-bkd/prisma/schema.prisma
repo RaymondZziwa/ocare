@@ -656,8 +656,6 @@ model Sale {
   storeId       String
   store         Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
   saleStatus    SaleStatus     @default(PENDING)
-  salePaymentId String         @unique
-  salePayment   SalePayment    @relation(fields: [salePaymentId], references: [id], onDelete: Cascade)
   status        PaymentStatus  @default(FULLY_PAID)
   total         Decimal        @db.Decimal(10, 2)
   paymentMethod String
@@ -724,7 +722,6 @@ model SalePayment {
   transaction_completed_at DateTime? // From webhook updated_at
   created_at               DateTime  @default(now())
   updated_at               DateTime  @updatedAt
-  sales                    Sale[]
 
   // Indexes for better query performance
   @@index([transaction_uuid])
