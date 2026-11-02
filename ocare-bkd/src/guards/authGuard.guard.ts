@@ -28,13 +28,11 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   getRequest(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest<Request>();
 
-    // Extract token from cookies (your current setup)
-    let token = request.cookies?.accessToken;
-
-    // Fallback to Authorization header for flexibility
-    if (!token && request.headers.authorization) {
-      token = request.headers.authorization.replace('Bearer ', '');
-    }
+    // Authorization header first (Portal), cookie as fallback
+    const header = request.headers.authorization;
+    const token = header?.startsWith('Bearer ')
+      ? header.slice(7)
+      : request.cookies?.accessToken;
 
     if (token) {
       request.headers.authorization = `Bearer ${token}`;

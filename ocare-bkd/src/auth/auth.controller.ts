@@ -86,9 +86,12 @@ export class AuthController {
 
     console.log(userData);
     // Remove tokens from the response since they're in cookies
+    // Tokens are also returned in the body. Browsers block cookies between different sites
+    // (portal on netlify.app, API on megaerpug.com), so the Portal sends them as a header instead.
     return {
       message: 'Login successful',
       user: userData,
+      tokens: { accessToken: token.accessToken, refreshToken: token.refreshToken },
     };
   }
 
@@ -181,6 +184,10 @@ export class AuthController {
     return {
       status: 200,
       message: 'Tokens refreshed successfully',
+      tokens: {
+        accessToken: newTokens.accessToken,
+        refreshToken: newTokens.refreshToken,
+      },
     };
   }
 

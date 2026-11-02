@@ -28,19 +28,14 @@ export class RefreshAuthGuard extends AuthGuard('jwt-refresh') {
   getRequest(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest<Request>();
 
-    // Extract refresh token from cookies
-    let token = request.cookies?.refreshToken;
-
-    // Fallback to Authorization header with "Refresh" prefix
-    if (!token && request.headers.authorization) {
-      const authHeader = request.headers.authorization;
-      if (authHeader.startsWith('Refresh ')) {
-        token = authHeader.replace('Refresh ', '');
-      }
-    }
+    // "Refresh <token>" header first (Portal), cookie as fallback
+    const authHeader = request.headers.authorization;
+    const token = authHeader?.startsWith('Refresh ')
+      ? authHeader.slice(8)
+      : request.cookies?.refreshToken;
 
     if (token) {
-      request.headers.authorization = `Bearer ${token}`;
+      request.headers.authorization = `Refresh ${token}`;
     }
 
     return request;

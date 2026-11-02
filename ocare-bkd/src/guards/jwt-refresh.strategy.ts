@@ -24,18 +24,10 @@ export class JwtRefreshStrategy extends PassportStrategy(
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         (request: Request) => {
-          // Check cookies for refresh token
-          let token: string | null = request.cookies?.refreshToken ?? null;
-
-          // Fallback to Authorization header
-          if (!token && request.headers.authorization) {
-            const authHeader = request.headers.authorization;
-            if (authHeader.startsWith('Refresh ')) {
-              token = authHeader.replace('Refresh ', '');
-            }
-          }
-
-          return token;
+          // "Refresh <token>" header first (Portal), cookie as fallback
+          const authHeader = request.headers.authorization;
+          if (authHeader?.startsWith('Refresh ')) return authHeader.slice(8);
+          return (request.cookies?.refreshToken as string | undefined) ?? null;
         },
       ]),
       ignoreExpiration: false,
