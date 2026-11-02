@@ -33,11 +33,18 @@ export class AuthService {
     return { firstName, lastName };
   };
 
-  async signIn(loginData: {
-    email: string;
-    password?: string;
-    rememberMe?: boolean;
-  }) {
+  /**
+   * @param trustedGoogleLogin only true when called from the Google OAuth callback.
+   * Public sign-in requests must always prove the password.
+   */
+  async signIn(
+    loginData: {
+      email: string;
+      password?: string;
+      rememberMe?: boolean;
+    },
+    trustedGoogleLogin = false,
+  ) {
     const { email, password, rememberMe } = loginData;
 
     try {
@@ -46,11 +53,16 @@ export class AuthService {
         where: { email },
       });
 
-      if (!user) {
+      if (!user || user.deletedAt) {
         throw new NotFoundException('Credentials are unknown to us.');
       }
 
-      // 2. For non-Google users, verify password
+      // 2. Google accounts can only sign in through Google
+      if (user.provider === 'Google' && !trustedGoogleLogin) {
+        throw new BadRequestException('This account was created with Google. Sign in with Google on the website, or use "Forgot password" to set a password for the app.');
+      }
+
+      // 3. Everyone else must give the right password
       if (user.provider !== 'Google') {
         if (!password) {
           throw new BadRequestException(
@@ -96,6 +108,7 @@ export class AuthService {
           fullName: user.fullName,
           phone: user.phone,
           gender: user.gender,
+          provider: user.provider,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
         },

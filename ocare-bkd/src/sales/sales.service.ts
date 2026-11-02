@@ -11,6 +11,8 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { ResendMailService } from 'src/utils/mailing/mailing.service';
 import { collectPayment } from 'src/utils/payments/collectPayment';
 import { QuotationService } from 'src/web-app/orders/quotationGeneration.service';
+import { PrescriptionsService } from 'src/mobile/prescriptions.service';
+import { OrderMailService } from 'src/mobile/order-mail.service';
 
 export interface CollectionResponse {
   status: string;
@@ -54,6 +56,8 @@ export class SalesService {
     private readonly configService: ConfigService,
     private readonly resendMailService: ResendMailService,
     private readonly quotationService: QuotationService,
+    private readonly prescriptionsService: PrescriptionsService,
+    private readonly orderMailService: OrderMailService,
   ) {}
 
   private async initiateMobileMoneyCollection(
@@ -87,7 +91,37 @@ export class SalesService {
       total,
       totalWithDelivery,
       phoneNumber,
+      prescriptionId,
+      addressId,
+      manualAddress,
     } = createSaleDto;
+
+    // Keep a copy of the delivery address on the order so riders always know where to go
+    let deliveryAddress: Record<string, string | null> | null = null;
+    if (addressId) {
+      const addr = await this.prisma.address.findUnique({ where: { id: addressId } });
+      if (addr && addr.clientId === String(customerId)) {
+        deliveryAddress = { label: addr.label, town: addr.town, village: addr.village, landmark: addr.landmark };
+      }
+    }
+    if (!deliveryAddress && manualAddress?.town) {
+      deliveryAddress = {
+        label: manualAddress.label || null,
+        town: manualAddress.town,
+        village: manualAddress.village,
+        landmark: manualAddress.landmark || null,
+      };
+    }
+
+    // Prescription-only medicines need a pharmacist-approved prescription (app & web orders)
+    let verifiedPrescriptionId: string | null = null;
+    if (source !== 'In_shop') {
+      verifiedPrescriptionId = await this.prescriptionsService.assertCovers(
+        String(customerId),
+        prescriptionId,
+        items.map((i) => String(i.id)),
+      );
+    }
 
     let storeToUseId = storeId;
 
@@ -146,6 +180,8 @@ export class SalesService {
         paymentMethod,
         notes,
         items,
+        prescriptionId: verifiedPrescriptionId,
+        deliveryAddress: deliveryAddress ?? undefined,
       },
       include: {
         client: true,
@@ -160,6 +196,9 @@ export class SalesService {
         state: 'CONFIRMED',
       },
     });
+
+    // "We received your order" email for app and website orders
+    if (source !== 'In_shop') void this.orderMailService.orderUpdate(createdSale.id, 'RECEIVED');
 
     return {
       message:
@@ -626,8 +665,9 @@ export class SalesService {
       where: {
         clientId: id,
       },
+      orderBy: { createdAt: 'desc' },
       include: {
-        timeLine: true,
+        timeLine: { orderBy: { createdAt: 'asc' } },
       },
     });
 

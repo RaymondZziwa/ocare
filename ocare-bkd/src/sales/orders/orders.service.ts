@@ -5,6 +5,8 @@ import { CreateClientDto } from 'src/dto/client.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { collectPayment } from 'src/utils/payments/collectPayment';
 import { CollectionResponse } from '../sales.service';
+import { PushService } from 'src/mobile/push.service';
+import { OrderMailService } from 'src/mobile/order-mail.service';
 
 @Injectable()
 export class AppOrdersService {
@@ -12,6 +14,8 @@ export class AppOrdersService {
     private readonly prisma: PrismaService,
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
+    private readonly pushService: PushService,
+    private readonly orderMailService: OrderMailService,
   ) {}
 
   private async initiateMobileMoneyCollection(
@@ -123,6 +127,13 @@ export class AppOrdersService {
         saleStatus: 'SUCCESSFUL',
       },
     });
+
+    await this.pushService.notifyClient(order.clientId, {
+      title: 'Order delivered',
+      body: `ORD-${id.slice(-8).toUpperCase()} has been delivered. Get well soon!`,
+      route: `/order/${id}`,
+    });
+    void this.orderMailService.orderUpdate(id, 'DELIVERED');
 
     return {
       message: 'Order updated successfully',

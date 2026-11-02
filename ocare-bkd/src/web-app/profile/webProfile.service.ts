@@ -129,6 +129,8 @@ export class WebProfileService {
         },
         data: {
           password: hashedNewPassword,
+          // A Google account that sets a password can now also sign in with it (e.g. in the mobile app)
+          ...(user.provider === 'Google' ? { provider: 'Web' as const } : {}),
         },
       });
 

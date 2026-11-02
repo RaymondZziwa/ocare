@@ -116,6 +116,16 @@ export class CreateSaleDto {
   @IsString()
   @IsOptional()
   phoneNumber: string;
+
+  @IsString()
+  @IsOptional()
+  prescriptionId?: string;
+
+  @IsOptional()
+  addressId?: string;
+
+  @IsOptional()
+  manualAddress?: { town: string; village: string; landmark?: string; label?: string } | null;
 }
 
 export class ExhibitionCreateSaleDto {

@@ -13,6 +13,7 @@ import { join } from 'path';
 import { SalesModule } from './sales/sales.module';
 import { ReportsModule } from './reports/reports.module';
 import { RoleModule } from './roles/roles.module';
+import { MobileModule } from './mobile/mobile.module';
 @Module({
   imports: [
     ServeStaticModule.forRoot({
@@ -37,6 +38,7 @@ import { RoleModule } from './roles/roles.module';
     SalesModule,
     ReportsModule,
     RoleModule,
+    MobileModule,
   ],
 })
 export class AppModule {}

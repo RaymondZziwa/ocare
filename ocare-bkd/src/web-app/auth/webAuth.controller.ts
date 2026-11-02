@@ -26,6 +26,7 @@ import { ForgotPasswordDto } from 'src/dto/forgotPwd.dto';
 import { WebProfileService } from '../profile/webProfile.service';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { ClientAuthGuard, type AuthedClient } from 'src/mobile/client-auth.guard';
 
 @Controller('api/web-auth')
 export class AuthController {
@@ -137,14 +138,20 @@ export class AuthController {
     return this.webProfileService.verifyEmail(dto.id, dto.newEmail);
   }
 
+  // Signed-in customers can only change their own profile and password
   @Post('profile-update')
-  async profileUpdate(@Body() dto: updateProfileDto) {
-    return this.webProfileService.updateProfile(dto);
+  @UseGuards(ClientAuthGuard)
+  async profileUpdate(@Req() req: { client: AuthedClient }, @Body() dto: updateProfileDto) {
+    return this.webProfileService.updateProfile({ ...dto, id: req.client.id });
   }
 
   @Post('update-password')
-  async passwordUpdate(@Body() dto: { id: string; newPassword: string }) {
-    return this.webProfileService.updatePassword(dto.id, dto.newPassword);
+  @UseGuards(ClientAuthGuard)
+  async passwordUpdate(@Req() req: { client: AuthedClient }, @Body() dto: { newPassword: string }) {
+    if (!dto?.newPassword || dto.newPassword.length < 6) {
+      throw new BadRequestException('Use at least 6 characters for your password.');
+    }
+    return this.webProfileService.updatePassword(req.client.id, dto.newPassword);
   }
 
   @Get('google')
@@ -185,7 +192,8 @@ export class AuthController {
           this.configService.getOrThrow<string>('FRONTEND_URL');
         return res.redirect(`${frontendUrl}/auth/callback?require_pwd=${true}`);
       }
-      const auth = await this.authService.signIn(loginData);
+      // Trusted: Google has already verified this user
+      const auth = await this.authService.signIn(loginData, true);
       // Extract token from the signIn response
       const token = auth.accessToken;
 

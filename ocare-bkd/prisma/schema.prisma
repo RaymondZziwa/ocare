@@ -337,6 +337,7 @@ model Item {
   sku String 
   image           String
   sideEffects     Json?
+  requiresPrescription Boolean @default(false) // prescription-only medicine (POM)
   variation       Json? // strengths of the medicine if any, e.g., 500mg, 250mg, etc.
   updatedAt       DateTime     @updatedAt
   createdAt       DateTime     @default(now())
@@ -439,6 +440,10 @@ model Client {
   inquiries       Inquiry[]
   clientOtps      ClientOtp[]
   sales           Sale[]
+  deletedAt       DateTime?
+  prescriptions   Prescription[]
+  chatThread      ChatThread?
+  deviceTokens    DeviceToken[]
 
   @@index([firstName, lastName])
   @@index([phone])
@@ -615,6 +620,8 @@ model Employee {
   branchExpenses   branchExpense[]
   salePayments     SalePayment[]
   sales            Sale[]
+  reviewedPrescriptions Prescription[]
+  chatMessages     ChatMessage[]
 
   @@index([email, isActive])
   @@index([createdAt])
@@ -660,6 +667,12 @@ model Sale {
   total         Decimal        @db.Decimal(10, 2)
   paymentMethod String
   notes         String?
+  prescriptionId      String?
+  prescription        Prescription? @relation(fields: [prescriptionId], references: [id], onDelete: SetNull)
+  deliveryAddress     Json? // snapshot of the address chosen at checkout
+  riderName           String?
+  riderPhone          String?
+  estimatedDeliveryAt DateTime?
   updatedAt     DateTime       @updatedAt
   createdAt     DateTime       @default(now())
   timeLine      SaleTimeLine[]
@@ -679,6 +692,7 @@ model SaleTimeLine {
   saleId    String
   sale      Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
   state     String
+  note      String?  @db.Text
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 }
@@ -941,4 +955,90 @@ model DraftInvoice {
   supplier Supplier? @relation(fields:[supplierId], references:[id], onDelete:Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ───────────── Mobile app features ─────────────
+
+enum PrescriptionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Prescription {
+  id            String             @id @default(uuid())
+  clientId      String
+  client        Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  images        Json // array of stored file names (kept outside the public uploads folder)
+  notes         String?            @db.Text
+  status        PrescriptionStatus @default(PENDING)
+  reviewNotes   String?            @db.Text
+  reviewedBy    String?
+  reviewer      Employee?          @relation(fields: [reviewedBy], references: [id], onDelete: SetNull)
+  reviewedAt    DateTime?
+  approvedItems Json? // item ids covered by this prescription; empty/null = all prescription-only items
+  validUntil    DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  sales         Sale[]
+
+  @@index([clientId, createdAt])
+  @@index([status, createdAt])
+  @@map("prescriptions")
+}
+
+enum ChatSender {
+  CLIENT
+  STAFF
+  SYSTEM
+}
+
+model ChatThread {
+  id            String        @id @default(uuid())
+  clientId      String        @unique
+  client        Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  lastMessageAt DateTime      @default(now())
+  lastMessage   String?       @db.Text
+  clientUnread  Int           @default(0)
+  staffUnread   Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  messages      ChatMessage[]
+
+  @@index([lastMessageAt])
+  @@map("chat_threads")
+}
+
+model ChatMessage {
+  id         String     @id @default(uuid())
+  threadId   String
+  thread     ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender     ChatSender
+  employeeId String?
+  employee   Employee?  @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  body       String     @db.Text
+  orderId    String?
+  createdAt  DateTime   @default(now())
+
+  @@index([threadId, createdAt])
+  @@map("chat_messages")
+}
+
+enum DevicePlatform {
+  ANDROID
+  IOS
+  WEB
+}
+
+model DeviceToken {
+  id        String         @id @default(uuid())
+  clientId  String
+  client    Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  token     String         @unique @db.VarChar(255)
+  platform  DevicePlatform
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([clientId])
+  @@map("device_tokens")
 }
