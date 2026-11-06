@@ -213,6 +213,7 @@ export class RefundsService {
     });
     if (res.count !== 1) return;
     const r = await this.prisma.refund.findUnique({ where: { id: refundId } });
+    if (!r) return;
     const w = await this.prisma.wallet.findFirst({ where: { isForAppSales: true } });
     if (w) await this.prisma.wallet.update({ where: { id: w.id }, data: { balance: { decrement: Number(r.amount) } } });
     void this.push.notifyClient(r.clientId, {
@@ -238,8 +239,10 @@ export class RefundsService {
     });
     if (res.count !== 1) return;
     const r = await this.prisma.refund.findUnique({ where: { id: refundId } });
+    if (!r) return;
     await this.prisma.sale.update({ where: { id: r.saleId }, data: { refundedAmount: { decrement: Number(r.amount) } } });
     const sale = await this.prisma.sale.findUnique({ where: { id: r.saleId } });
+    if (!sale) return;
     this.logger.warn(`Mobile money refund ${refundId} failed (${reason}); refunding to wallet instead`);
     await this.refundToWallet(sale, Number(r.amount), `${r.reason} (mobile money failed, sent to wallet)`, {
       saleId: r.saleId,

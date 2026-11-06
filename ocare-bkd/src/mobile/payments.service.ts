@@ -245,6 +245,7 @@ export class AppPaymentsService {
     });
     if (res.count !== 1) return;
     const p = await this.prisma.appPayment.findUnique({ where: { id: paymentId } });
+    if (!p) return;
     void this.push.notifyClient(p.clientId, {
       title: "Payment didn't go through",
       body:
