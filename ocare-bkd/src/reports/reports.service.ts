@@ -2740,4 +2740,55 @@ export class ReportService {
       message: 'Item batch report fetched successfully',
     };
   }
+
+  /**
+   * PDF of whatever report is on screen: the Portal sends the tables it is showing.
+   * Used for reports that have no dedicated server export.
+   */
+  async exportCustomReportPDF(dto: {
+    title?: string;
+    subtitle?: string;
+    filters?: Record<string, string>;
+    cards?: Array<{ title: string; value: string | number; subtitle?: string }>;
+    sections?: Array<{ title?: string; columns: string[]; rows: Array<Array<string | number | null>> }>;
+  }) {
+    const companyInfo = await this.companyService.getProfile();
+    if (!companyInfo) throw new NotFoundException('Company profile not found');
+
+    const title = String(dto?.title || 'Report').slice(0, 120);
+    const sections = (dto?.sections || []).slice(0, 20).map((sec, i) => {
+      const columns = (sec.columns || []).slice(0, 10).map((c) => String(c ?? '').slice(0, 40));
+      const width = Math.floor(500 / Math.max(columns.length, 1));
+      return {
+        title: String(sec.title || (dto.sections!.length > 1 ? `Table ${i + 1}` : 'Details')).slice(0, 120),
+        type: 'table' as const,
+        columns: columns.map((header, idx) => ({
+          header,
+          key: `c${idx}`,
+          width,
+          align: (idx > 0 && /^[\d\s.,%()+-]*(UGX)?[\d\s.,%()+-]*$/.test(String(sec.rows?.[0]?.[idx] ?? 'x'))
+            ? 'right'
+            : 'left') as 'left' | 'right',
+        })),
+        data: (sec.rows || []).slice(0, 5000).map((row) =>
+          Object.fromEntries(columns.map((_, idx) => [`c${idx}`, row?.[idx] == null ? '' : String(row[idx]).slice(0, 200)])),
+        ),
+      };
+    });
+
+    const config: ReportConfig = {
+      title,
+      subtitle: dto?.subtitle ? String(dto.subtitle).slice(0, 200) : undefined,
+      filters: { ...(dto?.filters || {}), Generated: new Date().toLocaleString('en-UG', { timeZone: 'Africa/Kampala' }) },
+      summary: dto?.cards?.length
+        ? { cards: dto.cards.slice(0, 9).map((c) => ({ title: String(c.title).slice(0, 40), value: String(c.value).slice(0, 24), subtitle: c.subtitle })) }
+        : undefined,
+      sections: sections.length ? sections : [{ title: 'Details', type: 'text', data: 'No data for the selected filters.' }],
+      companyInfo,
+    };
+
+    const buffer = await this.pdfService.generateReportPDF(config);
+    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'report';
+    return { buffer, filename: `${slug}-${new Date().toISOString().split('T')[0]}.pdf`, mimeType: 'application/pdf' };
+  }
 }

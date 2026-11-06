@@ -24,6 +24,10 @@ import { PrescriptionsService } from './prescriptions.service';
 import { ChatService } from './chat.service';
 import { OrdersTrackingService } from './orders-tracking.service';
 import { AccountService } from './account.service';
+import { CheckoutService, type CheckoutDto, type PayMethod } from './checkout.service';
+import { AppPaymentsService } from './payments.service';
+import { ClientWalletService } from './wallet.service';
+import type { RefundDestination } from './refunds.service';
 
 type ClientReq = { client: AuthedClient };
 
@@ -37,6 +41,9 @@ export class ClientAppController {
     private readonly chat: ChatService,
     private readonly orders: OrdersTrackingService,
     private readonly account: AccountService,
+    private readonly checkout: CheckoutService,
+    private readonly payments: AppPaymentsService,
+    private readonly wallet: ClientWalletService,
   ) {}
 
   // ───── Push notification devices ─────
@@ -121,8 +128,50 @@ export class ClientAppController {
 
   @Post('orders/:id/cancel')
   @HttpCode(HttpStatus.OK)
-  cancelOrder(@Req() req: ClientReq, @Param('id') id: string, @Body() dto: { reason?: string }) {
-    return this.orders.cancelByClient(req.client.id, id, dto?.reason);
+  cancelOrder(@Req() req: ClientReq, @Param('id') id: string, @Body() dto: { reason?: string; refundTo?: RefundDestination }) {
+    return this.orders.cancelByClient(req.client.id, id, dto?.reason, dto?.refundTo);
+  }
+
+  /** Pay for an order that is waiting for payment (retry mobile money, or switch method) */
+  @Post('orders/:id/pay')
+  @HttpCode(HttpStatus.OK)
+  payOrder(@Req() req: ClientReq, @Param('id') id: string, @Body() dto: { method: PayMethod; phone?: string }) {
+    return this.checkout.payOrder(req.client.id, id, dto || ({} as any));
+  }
+
+  // ───── Checkout ─────
+  @Get('checkout/info')
+  checkoutInfo(@Req() req: ClientReq) {
+    return this.checkout.info(req.client.id);
+  }
+
+  @Post('checkout/zone')
+  @HttpCode(HttpStatus.OK)
+  checkZone(@Body() dto: { latitude?: number; longitude?: number; area?: string }) {
+    return this.checkout.checkZone(dto || {});
+  }
+
+  @Post('checkout')
+  @HttpCode(HttpStatus.OK)
+  placeOrder(@Req() req: ClientReq, @Body() dto: CheckoutDto) {
+    return this.checkout.placeOrder(req.client.id, dto);
+  }
+
+  // ───── Payments & wallet ─────
+  @Get('payments/:id')
+  payment(@Req() req: ClientReq, @Param('id') id: string) {
+    return this.payments.getForClient(req.client.id, id);
+  }
+
+  @Get('wallet')
+  walletOverview(@Req() req: ClientReq) {
+    return this.wallet.overview(req.client.id);
+  }
+
+  @Post('wallet/topup')
+  @HttpCode(HttpStatus.OK)
+  topUp(@Req() req: ClientReq, @Body() dto: { amount: number; phone: string }) {
+    return this.payments.startTopUp(req.client.id, Number(dto?.amount), dto?.phone || '');
   }
 
   // ───── Account ─────

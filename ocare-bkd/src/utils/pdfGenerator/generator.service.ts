@@ -362,10 +362,13 @@ export class PdfService {
           : value?.toString() || '';
         const align = column.align || 'left';
 
+        // One line per cell: long text is cut with "…" instead of spilling into the next row
         doc.text(formattedValue, textX, currentY + 3, {
           width: columnWidths[colIndex] - 10,
+          height: 10,
           align,
           ellipsis: true,
+          lineBreak: false,
         });
 
         textX += columnWidths[colIndex];

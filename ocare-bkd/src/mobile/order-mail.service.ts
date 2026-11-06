@@ -130,7 +130,12 @@ export class OrderMailService {
                  </p>`
               : ''
           }
-          ${this.itemsTable(ref, items, sale.total.toString())}
+          ${
+            stage === 'RECEIVED' && sale.scheduledFor
+              ? `<p style="margin:0 0 16px;padding:12px 14px;background:#fdf3e2;border-radius:12px;font-size:14px;color:#132018;"><strong>Delivery tomorrow morning.</strong> You ordered after 11pm, so your rider will bring it from ${esc(new Date(sale.scheduledFor).toLocaleString('en-UG', { weekday: 'long', hour: 'numeric', minute: '2-digit', timeZone: 'Africa/Kampala' }))}.</p>`
+              : ''
+          }
+          ${this.itemsTable(ref, items, sale.total.toString(), sale.deliveryFee != null ? Number(sale.deliveryFee) : null)}
           ${address?.town ? `<p style="margin:16px 0 0;font-size:14px;color:#4b5a50;"><strong style="color:#132018;">Delivering to:</strong> ${esc(address.village)}, ${esc(address.town)}${address.landmark ? ` (near ${esc(address.landmark)})` : ''}</p>` : ''}
           ${this.button('Track your order', this.appUrl(`/order/${sale.id}`))}
         `,
@@ -167,6 +172,33 @@ export class OrderMailService {
     }
   }
 
+  /** Short transactional notice (refunds, wallet top-ups). Never throws. */
+  async notice(
+    clientId: string,
+    opts: { subject: string; headline: string; body: string; amount?: number; buttonLabel?: string; path?: string },
+  ) {
+    try {
+      const client = await this.prisma.client.findUnique({
+        where: { id: clientId },
+        select: { email: true, firstName: true, fullName: true, deletedAt: true },
+      });
+      if (!client || client.deletedAt) return;
+      const html = this.layout({
+        preheader: opts.headline,
+        body: `
+          <p style="margin:0 0 4px;font-size:14px;color:#4b5a50;">Hi ${esc(client.firstName || client.fullName)},</p>
+          <h1 style="margin:0 0 8px;font-size:24px;line-height:1.25;color:#132018;">${esc(opts.headline)}</h1>
+          ${opts.amount != null ? `<p style="margin:0 0 12px;font-size:30px;font-weight:800;color:#0a4d1f;">${ugx(opts.amount)}</p>` : ''}
+          <p style="margin:0;font-size:15px;line-height:1.6;color:#4b5a50;">${esc(opts.body)}</p>
+          ${opts.path ? this.button(opts.buttonLabel || 'Open the Ocare app', this.appUrl(opts.path)) : ''}
+        `,
+      });
+      await this.send(client.email, opts.subject, html);
+    } catch (err) {
+      this.logger.warn(`Notice email for ${clientId} failed: ${(err as Error).message}`);
+    }
+  }
+
   // ───────────── HTML pieces (email-safe tables + inline styles) ─────────────
   private stepper(stage: MailStage) {
     if (stage === 'CANCELLED' || stage === 'FAILED') return '';
@@ -181,7 +213,7 @@ export class OrderMailService {
     return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;"><tr>${cells}</tr></table>`;
   }
 
-  private itemsTable(ref: string, items: OrderLine[], total: string) {
+  private itemsTable(ref: string, items: OrderLine[], total: string, deliveryFee: number | null = null) {
     const rows = items
       .map(
         (i) => `<tr>
@@ -193,6 +225,11 @@ export class OrderMailService {
     return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
       <tr><td colspan="2" style="padding:0 0 6px;font-size:12px;color:#7d8a81;">Order ${esc(ref)}</td></tr>
       ${rows}
+      ${
+        deliveryFee != null
+          ? `<tr><td style="padding:8px 0;font-size:14px;color:#4b5a50;border-bottom:1px solid #dfe8e0;">Delivery (Kampala)</td><td align="right" style="padding:8px 0;font-size:14px;color:#132018;border-bottom:1px solid #dfe8e0;">${ugx(deliveryFee)}</td></tr>`
+          : ''
+      }
       <tr>
         <td style="padding:12px 0 0;font-size:15px;font-weight:700;color:#132018;">Total</td>
         <td align="right" style="padding:12px 0 0;font-size:17px;font-weight:700;color:#0a4d1f;">${ugx(total)}</td>

@@ -7,6 +7,7 @@ import { collectPayment } from 'src/utils/payments/collectPayment';
 import { CollectionResponse } from '../sales.service';
 import { PushService } from 'src/mobile/push.service';
 import { OrderMailService } from 'src/mobile/order-mail.service';
+import { RefundsService } from 'src/mobile/refunds.service';
 
 @Injectable()
 export class AppOrdersService {
@@ -16,6 +17,7 @@ export class AppOrdersService {
     private readonly configService: ConfigService,
     private readonly pushService: PushService,
     private readonly orderMailService: OrderMailService,
+    private readonly refundsService: RefundsService,
   ) {}
 
   private async initiateMobileMoneyCollection(
@@ -125,6 +127,8 @@ export class AppOrdersService {
       },
       data: {
         saleStatus: 'SUCCESSFUL',
+        // Cash on delivery: the rider collected the money
+        ...(order.status !== 'FULLY_PAID' ? { status: 'FULLY_PAID', paidAt: new Date() } : {}),
       },
     });
 
@@ -151,11 +155,17 @@ export class AppOrdersService {
       throw new NotFoundException(`Order not found`);
     }
 
-    await this.prisma.sale.delete({
-      where: {
-        id,
-      },
-    });
+    // Keep the record (it may hold a payment) and refund anything paid, instantly to the wallet
+    await this.prisma.$transaction([
+      this.prisma.sale.update({ where: { id }, data: { saleStatus: 'CANCELLED' } }),
+      this.prisma.saleTimeLine.create({ data: { saleId: id, state: 'CANCELLED', note: 'Cancelled by the pharmacy' } }),
+    ]);
+    if (['Mobile', 'Web'].includes(order.type)) {
+      await this.refundsService
+        .refundOnCancel(id, { destination: 'WALLET', reason: 'Order cancelled by the pharmacy', by: 'staff' })
+        .catch(() => null);
+      void this.orderMailService.orderUpdate(id, 'CANCELLED', { note: 'Cancelled by the pharmacy.' });
+    }
 
     return {
       message: 'Order cancelled successfully',

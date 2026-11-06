@@ -1,9 +1,22 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Post, Query, StreamableFile, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from 'src/guards/authGuard.guard';
 import { ReportService } from './reports.service';
 
 @Controller('api/reports')
 export class ReportsController {
   constructor(private readonly reportService: ReportService) {}
+
+  /** Downloads a PDF of the tables currently shown in a Portal report */
+  @Post('export/custom')
+  @HttpCode(200)
+  @UseGuards(JwtAuthGuard)
+  async exportCustom(@Body() dto: any) {
+    const { buffer, filename } = await this.reportService.exportCustomReportPDF(dto);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${filename}"`,
+    });
+  }
 
   @Get('/stock-level-analysis/:id')
   async getStockLevelAnalysis(@Param('id') id: string) {

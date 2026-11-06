@@ -19,6 +19,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { PrescriptionsService } from './prescriptions.service';
 import { ChatService } from './chat.service';
 import { OrdersTrackingService, type TrackStatus } from './orders-tracking.service';
+import { RefundsService, type RefundDestination } from './refunds.service';
 
 type StaffReq = { user: { id: string } };
 
@@ -31,6 +32,7 @@ export class StaffDeskController {
     private readonly prescriptions: PrescriptionsService,
     private readonly chat: ChatService,
     private readonly orders: OrdersTrackingService,
+    private readonly refunds: RefundsService,
   ) {}
 
   @Get('desk/summary')
@@ -119,10 +121,35 @@ export class StaffDeskController {
 
   @Patch('orders/:id/status')
   updateOrder(
+    @Req() req: StaffReq,
     @Param('id') id: string,
     @Body()
     dto: { status: TrackStatus; note?: string; riderName?: string; riderPhone?: string; estimatedDeliveryAt?: string },
   ) {
-    return this.orders.updateStatus(id, dto);
+    return this.orders.updateStatus(id, dto, req.user?.id);
+  }
+
+  // ───── Refunds ─────
+  @Post('orders/:id/refund')
+  @HttpCode(HttpStatus.OK)
+  refund(
+    @Req() req: StaffReq,
+    @Param('id') id: string,
+    @Body() dto: { amount?: number; destination: RefundDestination; reason: string; phone?: string },
+  ) {
+    return this.refunds.refund({
+      saleId: id,
+      amount: dto?.amount != null && dto.amount !== ('' as any) ? Number(dto.amount) : undefined,
+      destination: dto?.destination,
+      reason: dto?.reason,
+      phone: dto?.phone || null,
+      requestedBy: 'staff',
+      employeeId: req.user?.id,
+    });
+  }
+
+  @Get('refunds')
+  refundList() {
+    return this.refunds.listForStaff();
   }
 }

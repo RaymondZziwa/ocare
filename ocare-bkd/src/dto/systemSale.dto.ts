@@ -39,6 +39,12 @@ export class CreateSaleItemDto {
   @IsNumber()
   @Min(0.000001)
   quantity: number;
+
+  /** Discount on this line, in UGX */
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  discount?: number;
 }
 
 export class CreateSystemSaleDto {
@@ -68,4 +74,20 @@ export class CreateSystemSaleDto {
   @ValidateNested({ each: true })
   @Type(() => CreateSaleItemDto)
   items!: CreateSaleItemDto[];
+
+  /** Discount on the whole sale, as a percentage (0–100) */
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  discountPercent?: number;
+
+  /** When the sale happened. YYYY-MM-DD (or ISO date-time). Defaults to now. */
+  @IsOptional()
+  @IsString()
+  saleDate?: string;
+
+  /** Draft this sale was completed from (it gets marked completed) */
+  @IsOptional()
+  @IsString()
+  draftId?: string;
 }

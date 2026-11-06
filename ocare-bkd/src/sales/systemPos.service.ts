@@ -66,6 +66,47 @@ export class SystemPosService {
     return paymentResult;
   }
 
+  /**
+   * Turns the optional sale date into a real Date.
+   * "YYYY-MM-DD" keeps the current Kampala time of day on that date, so past sales still sort naturally.
+   * Future dates are refused; null means "now".
+   */
+  private resolveSaleDate(raw?: string | null): Date | null {
+    if (!raw) return null;
+    let date: Date;
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw.trim());
+    if (m) {
+      const now = new Date(Date.now() + 3 * 3600 * 1000); // Kampala wall clock
+      date = new Date(
+        Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), now.getUTCHours() - 3, now.getUTCMinutes(), now.getUTCSeconds()),
+      );
+    } else {
+      date = new Date(raw);
+    }
+    if (Number.isNaN(date.getTime())) throw new BadRequestException('The sale date is not valid.');
+    if (date.getTime() > Date.now() + 5 * 60 * 1000) throw new BadRequestException('The sale date cannot be in the future.');
+    if (date.getTime() < Date.now() - 2 * 365 * 24 * 3600 * 1000)
+      throw new BadRequestException('The sale date is too far in the past.');
+    // Today's date → just use "now"
+    return Math.abs(date.getTime() - Date.now()) < 60 * 1000 ? null : date;
+  }
+
+  /** Line discounts (UGX) and a whole-sale discount (%), applied after line discounts. */
+  private applyDiscounts(processedItems: any[], discountPercent?: number) {
+    let subtotal = 0;
+    for (const item of processedItems) {
+      const gross = item.unitPrice * item.quantity;
+      const lineDiscount = Math.min(Math.max(Number(item.discount) || 0, 0), gross);
+      item.lineDiscount = lineDiscount;
+      item.lineTotal = gross - lineDiscount;
+      subtotal += item.lineTotal;
+    }
+    const pct = Number(discountPercent) || 0;
+    if (pct < 0 || pct > 100) throw new BadRequestException('Discount must be between 0% and 100%.');
+    const discount = Math.round((subtotal * pct) / 100);
+    return { subtotal, discount, total: subtotal - discount };
+  }
+
   async saveSale(dto: CreateSystemSaleDto) {
     if (dto.paymentMethod !== 'cash' && dto.paymentMethod !== 'pesapal') {
       throw new BadRequestException('Only cash sales are currently supported.');
@@ -219,6 +260,10 @@ export class SystemPosService {
       });
     }
 
+    const totals = this.applyDiscounts(processedItems, dto.discountPercent);
+    subtotal = totals.subtotal;
+    const saleDate = this.resolveSaleDate(dto.saleDate);
+
     /**
      * ----------------------------------------
      * SAVE EVERYTHING
@@ -230,7 +275,8 @@ export class SystemPosService {
       const payment = await tx.salePayment.create({
         data: {
           cashierId: dto.soldBy,
-          amount: subtotal,
+          amount: totals.total,
+          ...(saleDate ? { created_at: saleDate } : {}),
         },
       });
 
@@ -248,11 +294,17 @@ export class SystemPosService {
 
           subtotal,
 
-          total: subtotal,
+          discount: totals.discount,
+
+          total: totals.total,
+
+          notes: dto.notes?.trim() || null,
 
           status: 'SUCCESSFUL',
 
           salePaymentId: payment.id,
+
+          ...(saleDate ? { createdAt: saleDate } : {}),
         },
       });
 
@@ -274,7 +326,11 @@ export class SystemPosService {
 
             unitPrice: item.unitPrice,
 
+            discount: item.lineDiscount,
+
             total: item.lineTotal,
+
+            ...(saleDate ? { createdAt: saleDate } : {}),
           },
         });
 
@@ -299,6 +355,10 @@ export class SystemPosService {
             },
           },
         });
+      }
+
+      if (dto.draftId) {
+        await tx.draftSale.updateMany({ where: { id: dto.draftId }, data: { isCompleted: true } });
       }
 
       return {
@@ -480,9 +540,13 @@ export class SystemPosService {
       if (!batchInventory)
         throw new BadRequestException(`Batch ${batch.number} is not stocked.`);
 
-      if (batchInventory.quantity < item.quantity)
+      // Stock was given back above, but these maps were read before that
+      const heldInBatch = existingSale.items
+        .filter((x) => x.batchId === item.batchId)
+        .reduce((sum, x) => sum + Number(x.quantity), 0);
+      if (batchInventory.quantity + heldInBatch < item.quantity)
         throw new BadRequestException(
-          `${batch.number} has only ${batchInventory.quantity} remaining.`,
+          `${batch.number} has only ${batchInventory.quantity + heldInBatch} remaining.`,
         );
 
       const productInventory = productInventoryMap.get(
@@ -492,7 +556,10 @@ export class SystemPosService {
       if (!productInventory)
         throw new BadRequestException('Product inventory missing.');
 
-      if (productInventory.qty < item.quantity)
+      const heldInProduct = existingSale.items
+        .filter((x) => x.itemId === item.itemId && x.unitId === item.unitId)
+        .reduce((sum, x) => sum + Number(x.quantity), 0);
+      if (productInventory.qty + heldInProduct < item.quantity)
         throw new BadRequestException('Overall inventory is insufficient.');
 
       const unitPrice =
@@ -514,6 +581,10 @@ export class SystemPosService {
       });
     }
 
+    const totals = this.applyDiscounts(processedItems, dto.discountPercent);
+    subtotal = totals.subtotal;
+    const saleDate = this.resolveSaleDate(dto.saleDate);
+
     /**
      * ----------------------------------------
      * UPDATE EVERYTHING
@@ -527,7 +598,7 @@ export class SystemPosService {
           where: { id: existingSale.salePaymentId },
           data: {
             cashierId: dto.soldBy,
-            amount: subtotal,
+            amount: totals.total,
           },
         });
       }
@@ -545,7 +616,10 @@ export class SystemPosService {
           servedBy: dto.soldBy,
           paymentMethod: dto.paymentMethod,
           subtotal,
-          total: subtotal,
+          discount: totals.discount,
+          total: totals.total,
+          ...(dto.notes !== undefined ? { notes: dto.notes?.trim() || null } : {}),
+          ...(saleDate ? { createdAt: saleDate } : {}),
         },
       });
 
@@ -561,7 +635,9 @@ export class SystemPosService {
             saleType: 'In_shop',
             mode: item.saleType === 'wholesale' ? 'Wholesale' : 'Retail',
             unitPrice: item.unitPrice,
+            discount: item.lineDiscount,
             total: item.lineTotal,
+            createdAt: saleDate ?? existingSale.createdAt,
           },
         });
 

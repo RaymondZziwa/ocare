@@ -11,6 +11,12 @@ import { AccountService } from './account.service';
 import { OrderMailService } from './order-mail.service';
 import { ClientAppController } from './client.controller';
 import { StaffDeskController } from './staff.controller';
+import { PaymentsCallbackController } from './payments.controller';
+import { MarzClient } from './marz.client';
+import { ClientWalletService } from './wallet.service';
+import { RefundsService } from './refunds.service';
+import { AppPaymentsService } from './payments.service';
+import { CheckoutService } from './checkout.service';
 
 /**
  * Customer-app features: prescriptions, pharmacist chat, live order tracking,
@@ -20,7 +26,7 @@ import { StaffDeskController } from './staff.controller';
 @Global()
 @Module({
   imports: [ConfigModule],
-  controllers: [ClientAppController, StaffDeskController],
+  controllers: [ClientAppController, StaffDeskController, PaymentsCallbackController],
   providers: [
     PrismaService,
     JwtService,
@@ -31,7 +37,12 @@ import { StaffDeskController } from './staff.controller';
     OrdersTrackingService,
     AccountService,
     OrderMailService,
+    MarzClient,
+    ClientWalletService,
+    RefundsService,
+    AppPaymentsService,
+    CheckoutService,
   ],
-  exports: [PushService, PrescriptionsService, ChatService, OrderMailService],
+  exports: [PushService, PrescriptionsService, ChatService, OrderMailService, RefundsService],
 })
 export class MobileModule {}
